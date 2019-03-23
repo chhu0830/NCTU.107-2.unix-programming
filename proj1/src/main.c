@@ -27,30 +27,37 @@ int main() {
     proc = opendir("/proc");
     
     while ((pid = readdir(proc)) != NULL) {
+        // Only /proc/[pid]/
         if (!is_str_digit(pid->d_name)) {
             continue;
         }
 
         sprintf(fdpath, "/proc/%s/fd", pid->d_name);
 
+        // Skip if fail to open dir due to permission deny or other reason
         if ((fd = opendir(fdpath)) == NULL) {
             continue;
         }
         
         while ((fdnum = readdir(fd)) != NULL) {
+            // Skip . and ..
             if (!is_str_digit(fdnum->d_name)) {
                 continue;
             }
 
             sprintf(lnpath, "%s/%s", fdpath, fdnum->d_name);
 
+            // Follow the link
             memset(tgpath, 0, sizeof(tgpath));
             readlink(lnpath, tgpath, sizeof(tgpath));
 
-            printf("%s %s\n", lnpath, tgpath);
+            // Get inode if the fd is socket
+            int inode;
+            if (sscanf(tgpath, "socket:[%d]", &inode)) {
+                printf("%s %s %d\n", lnpath, tgpath, inode);
+            }
 
         }
-        
     }
     
     return 0;
