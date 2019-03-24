@@ -47,7 +47,7 @@ int main(int argc, const char *argv[]) {
     struct PROCINFO info[1024];
     unsigned int nconn[4], ninfo = 0, type = 0xF;
     struct CONN conns[4][1024];
-    char *filter = ".";
+    char *filter = "";
 
     int c;
     while ((c = getopt_long(argc, (char*const*)argv, optstring, opts, NULL)) != -1) {
@@ -72,8 +72,13 @@ int main(int argc, const char *argv[]) {
 
     ninfo = read_fd(info);
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0, flag = false; i < 4; i++) {
         if (type >> i & 0x1) {
+            if ((i & 0x1) == 0) {
+                printf("%sList of %s connections:\n", (flag ? "\n" : ""), (i >> 1 ? "UDP" : "TCP"));
+                printf("%-8s%-32s%-32s%s\n", "Proto", "Local Address", "Foreign Address", "PID/Program name and arguments");
+                flag = true;
+            }
             nconn[i] = read_conn(conns[i], i);
             show(info, ninfo, conns[i], nconn[i], filter);
         }
@@ -207,7 +212,7 @@ void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigne
 
     regcomp(&regex, filter, 0);
 
-    for (unsigned int i = 0, flag = true; i < nconn; i++) {
+    for (unsigned int i = 0; i < nconn; i++) {
         // TODO: Prettify
         if (conns[i].local_port) {
             sprintf(local_addr, "%s:%hu", conns[i].local_ip, conns[i].local_port);
@@ -221,19 +226,21 @@ void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigne
             sprintf(rmt_addr, "%s:*", conns[i].rmt_ip);
         }
 
-        printf("%-8s%-32s%-32s", conns[i].type, local_addr, rmt_addr);
-
-        for (unsigned int j = 0; flag && j < ninfo; j++) {
+        int idx = -1;
+        for (unsigned int j = 0; j < ninfo; j++) {
             if (conns[i].inode == info[j].inode && regexec(&regex, info[j].cmdline, 0, NULL, 0) == 0) {
-                printf("\t%d/%s\n", info[j].pid, info[j].cmdline);
-                flag = false;
+                idx = j;
+                break;
             }
         }
 
-        if (flag) {
-            printf("\t-\n");
-        } else {
-            flag = true;
+        if (idx >= 0 || !filter[0]) {
+            printf("%-8s%-32s%-32s", conns[i].type, local_addr, rmt_addr);
+            if (idx >= 0) {
+                printf("%d/%s\n", info[idx].pid, info[idx].cmdline);
+            } else {
+                printf("-\n");
+            }
         }
     }
 }
