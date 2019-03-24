@@ -5,7 +5,7 @@ STUDENT_ID  := 0756020
 EXECUTABLE  := hw1
 
 OUT         ?= .build
-SRCS        := $(wildcard *.c */*.c)
+SRCS        := $(wildcard src/*.c)
 OBJS        := $(addprefix $(OUT)/, $(SRCS:.c=.o))
 DEPS        := $(OBJS:.o=.o.d)
 
@@ -21,7 +21,7 @@ run: $(EXECUTABLE)
 
 zip:
 	@rm -rf $(STUDENT_ID) $(STUDENT_ID).zip ; mkdir $(STUDENT_ID)
-	@git ls-files | xargs -i cp {} $(STUDENT_ID)
+	@git ls-files | xargs -i cp --parents {} $(STUDENT_ID)
 	@zip -r $(STUDENT_ID).zip $(STUDENT_ID) ; rm -rf $(STUDENT_ID)
 
 clean:
