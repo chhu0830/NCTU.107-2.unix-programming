@@ -11,7 +11,7 @@
 #define false 0
 #define true 1
 
-struct CONNECTION {
+struct CONN {
     char local_ip[32], rmt_ip[32];
     unsigned short int local_port, rmt_port;
     unsigned int inode;
@@ -23,12 +23,12 @@ struct PROCINFO {
 };
 
 
-unsigned int read_connection(struct CONNECTION *list, int type);
+unsigned int read_conn(struct CONN *list, int type);
 unsigned int read_fd(struct PROCINFO *info);
 // TODO: Try not to pass entire `info` into read_cmdline
 void read_cmdline(char *pid, struct PROCINFO *info);
 char is_str_digit(char *str);
-void show(struct PROCINFO *info, unsigned int ninfo, struct CONNECTION *connections, unsigned int nconn, int type);
+void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigned int nconn, int type);
 
 
 const char TYPE[][8] = {"tcp", "udp", "tcp6", "udp6"};
@@ -37,20 +37,20 @@ const char TYPE[][8] = {"tcp", "udp", "tcp6", "udp6"};
 int main() {
     struct PROCINFO info[1024];
     unsigned int nconn[4], ninfo = 0;
-    struct CONNECTION connections[4][1024];
+    struct CONN conns[4][1024];
 
     ninfo = read_fd(info);
 
-    nconn[0] = read_connection(connections[0], 0);
-    nconn[1] = read_connection(connections[1], 1);
+    nconn[0] = read_conn(conns[0], 0);
+    nconn[1] = read_conn(conns[1], 1);
 
-    show(info, ninfo, connections[0], nconn[0], 0);
-    show(info, ninfo, connections[1], nconn[1], 1);
+    show(info, ninfo, conns[0], nconn[0], 0);
+    show(info, ninfo, conns[1], nconn[1], 1);
 
     return 0;
 }
 
-unsigned int read_connection(struct CONNECTION *list, int type) {
+unsigned int read_conn(struct CONN *list, int type) {
     unsigned int idx, dummy, local_ip, local_port, rmt_ip, rmt_port, inode;
     char str[256], filename[256];
     
@@ -155,13 +155,13 @@ char is_str_digit(char *str) {
     return true;
 }
 
-void show(struct PROCINFO *info, unsigned int ninfo, struct CONNECTION *connections, unsigned int nconn, int type) {
+void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigned int nconn, int type) {
     const char *prefix = TYPE[type];
 
     for (unsigned int i = 0; i < nconn; i++) {
         for (unsigned int j = 0; j < ninfo; j++) {
-            if (connections[i].inode == info[j].inode) {
-                printf("%s\t%s:%u\t%s:%u\t%d/%s\n", prefix, connections[i].local_ip, connections[i].local_port, connections[i].rmt_ip, connections[i].rmt_port, info[j].pid, info[j].cmdline);
+            if (conns[i].inode == info[j].inode) {
+                printf("%s\t%s:%u\t%s:%u\t%d/%s\n", prefix, conns[i].local_ip, conns[i].local_port, conns[i].rmt_ip, conns[i].rmt_port, info[j].pid, info[j].cmdline);
             }
         }
     }
