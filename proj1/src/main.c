@@ -14,7 +14,7 @@
 #define true 1
 
 struct CONN {
-    char local_ip[32], rmt_ip[32], *type;
+    char local_ip[64], rmt_ip[64], *type;
     unsigned short int local_port, rmt_port;
     unsigned int inode;
 };
@@ -45,18 +45,20 @@ const char *optstring = "tu";
 
 int main(int argc, const char *argv[]) {
     struct PROCINFO info[1024];
-    unsigned int nconn[4], ninfo = 0, type = 0x1111;
+    unsigned int nconn[4], ninfo = 0, type = 0xF;
     struct CONN conns[4][1024];
     char *filter = ".";
 
     int c;
-    while ((c = getopt_long(argc, argv, optstring, opts, NULL)) != -1) {
+    while ((c = getopt_long(argc, (char*const*)argv, optstring, opts, NULL)) != -1) {
         switch (c) {
             case 't':
-                type &= 0x0011;
+                // 0b0011
+                type &= 0x3;
                 break;
             case 'u':
-                type &= 0x1100;
+                // 0b1100
+                type &= 0xc;
                 break;
             default:
                 printf("%s [-t|--tcp] [-u|--udp] [filter-string]\n", argv[0]);
@@ -65,7 +67,7 @@ int main(int argc, const char *argv[]) {
     }
     
     if (optind < argc) {
-        filter = argv[optind];
+        filter = (char*)argv[optind];
     }
 
     ninfo = read_fd(info);
@@ -81,7 +83,7 @@ int main(int argc, const char *argv[]) {
 }
 
 unsigned int read_conn(struct CONN *list, int type) {
-    unsigned int idx, dummy, local_ip, local_port, rmt_ip, rmt_port, inode;
+    unsigned int idx, dummy, local_ip[4], rmt_ip[4], local_port, rmt_port, inode;
     char str[512], filename[256];
     
     sprintf(filename, "/proc/net/%s", TYPE[type]);
@@ -91,7 +93,17 @@ unsigned int read_conn(struct CONN *list, int type) {
     fgets(str, sizeof(str), file);
 
     for (idx = 0; fscanf(file, "%u:", &dummy) != EOF; idx++) {
-        fscanf(file, "%x:%x %x:%x", &local_ip, &local_port, &rmt_ip, &rmt_port);
+        int n = (type & 1 ? 4 : 1);
+
+        for (int i = 0; i < n; i++) {
+            fscanf(file, "%08x", &local_ip[i]);
+        }
+        fscanf(file, ":%04x", &local_port);
+
+        for (int i = 0; i < n; i++) {
+            fscanf(file, "%08x", &rmt_ip[i]);
+        }
+        fscanf(file, ":%04x", &rmt_port);
 
         for (int i = 0; i < 6; i++) {
             fscanf(file, "%s", str);
@@ -102,12 +114,15 @@ unsigned int read_conn(struct CONN *list, int type) {
         // Read until line end
         fgets(str, sizeof(str), file);
 
-        inet_ntop(AF_INET, &local_ip, list[idx].local_ip, INET_ADDRSTRLEN);
-        inet_ntop(AF_INET, &rmt_ip, list[idx].rmt_ip, INET_ADDRSTRLEN);
+        const int AF = (type & 1 ? AF_INET6 : AF_INET);
+        const int ADDRSTRLEN = (type & 1 ? INET6_ADDRSTRLEN : INET_ADDRSTRLEN);
+
+        inet_ntop(AF, &local_ip, list[idx].local_ip, ADDRSTRLEN);
+        inet_ntop(AF, &rmt_ip, list[idx].rmt_ip, INET_ADDRSTRLEN);
         list[idx].local_port = local_port;
         list[idx].rmt_port = rmt_port;
         list[idx].inode = inode;
-        list[idx].type = TYPE[type];
+        list[idx].type = (char*)TYPE[type];
     }
     
     return idx;
@@ -187,16 +202,25 @@ char is_str_digit(char *str) {
 }
 
 void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigned int nconn, char *filter) {
+    char local_addr[128], rmt_addr[128];
     regex_t regex;
 
     regcomp(&regex, filter, 0);
 
-    for (unsigned int i = 0; i < nconn; i++) {
-        for (unsigned int j = 0; j < ninfo; j++) {
+    for (unsigned int i = 0, flag = true; i < nconn; i++) {
+        sprintf(local_addr, "%s:%hu", conns[i].local_ip, conns[i].local_port);
+        sprintf(rmt_addr, "%s:%hu", conns[i].rmt_ip, conns[i].rmt_port);
+        printf("%-8s%-32s%-32s", conns[i].type, local_addr, rmt_addr);
+        for (unsigned int j = 0; flag && j < ninfo; j++) {
             if (conns[i].inode == info[j].inode && regexec(&regex, info[j].cmdline, 0, NULL, 0) == 0) {
-                printf("%s\t%s:%u\t%s:%u", conns[i].type, conns[i].local_ip, conns[i].local_port, conns[i].rmt_ip, conns[i].rmt_port);
                 printf("\t%d/%s\n", info[j].pid, info[j].cmdline);
+                flag = false;
             }
+        }
+        if (flag) {
+            printf("\t-\n");
+        } else {
+            flag = true;
         }
     }
 }
