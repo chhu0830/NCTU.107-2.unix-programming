@@ -208,15 +208,28 @@ void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigne
     regcomp(&regex, filter, 0);
 
     for (unsigned int i = 0, flag = true; i < nconn; i++) {
-        sprintf(local_addr, "%s:%hu", conns[i].local_ip, conns[i].local_port);
-        sprintf(rmt_addr, "%s:%hu", conns[i].rmt_ip, conns[i].rmt_port);
+        // TODO: Prettify
+        if (conns[i].local_port) {
+            sprintf(local_addr, "%s:%hu", conns[i].local_ip, conns[i].local_port);
+        } else {
+            sprintf(local_addr, "%s:*", conns[i].local_ip);
+        }
+        
+        if (conns[i].rmt_port) {
+            sprintf(rmt_addr, "%s:%hu", conns[i].rmt_ip, conns[i].rmt_port);
+        } else {
+            sprintf(rmt_addr, "%s:*", conns[i].rmt_ip);
+        }
+
         printf("%-8s%-32s%-32s", conns[i].type, local_addr, rmt_addr);
+
         for (unsigned int j = 0; flag && j < ninfo; j++) {
             if (conns[i].inode == info[j].inode && regexec(&regex, info[j].cmdline, 0, NULL, 0) == 0) {
                 printf("\t%d/%s\n", info[j].pid, info[j].cmdline);
                 flag = false;
             }
         }
+
         if (flag) {
             printf("\t-\n");
         } else {
