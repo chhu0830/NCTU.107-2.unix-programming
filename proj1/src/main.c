@@ -11,7 +11,6 @@
 #define false 0
 #define true 1
 
-
 struct CONNECTION {
     char local_ip[32], rmt_ip[32];
     unsigned short int local_port, rmt_port;
@@ -19,17 +18,20 @@ struct CONNECTION {
 };
 
 struct PROCINFO {
-    unsigned short int pid;
-    unsigned int inode;
+    unsigned int inode, pid;
     char cmdline[512];
 };
 
 
-unsigned int read_connection(struct CONNECTION *list, char *filename, int type);
+unsigned int read_connection(struct CONNECTION *list, int type);
 unsigned int read_fd(struct PROCINFO *info);
 // TODO: Try not to pass entire `info` into read_cmdline
 void read_cmdline(char *pid, struct PROCINFO *info);
 char is_str_digit(char *str);
+void show(struct PROCINFO *info, unsigned int ninfo, struct CONNECTION *connections, unsigned int nconn, int type);
+
+
+const char TYPE[][8] = {"tcp", "udp", "tcp6", "udp6"};
 
 
 int main() {
@@ -39,16 +41,21 @@ int main() {
 
     ninfo = read_fd(info);
 
-    nconn[0] = read_connection(connections[0], "/proc/net/tcp", 0);
-    nconn[1] = read_connection(connections[1], "/proc/net/udp", 1);
+    nconn[0] = read_connection(connections[0], 0);
+    nconn[1] = read_connection(connections[1], 1);
+
+    show(info, ninfo, connections[0], nconn[0], 0);
+    show(info, ninfo, connections[1], nconn[1], 1);
 
     return 0;
 }
 
-unsigned int read_connection(struct CONNECTION *list, char *filename, int type) {
-    FILE *file = fopen(filename, "r");
+unsigned int read_connection(struct CONNECTION *list, int type) {
     unsigned int idx, dummy, local_ip, local_port, rmt_ip, rmt_port, inode;
-    char str[256];
+    char str[256], filename[256];
+    
+    sprintf(filename, "/proc/net/%s", TYPE[type]);
+    FILE *file = fopen(filename, "r");
     
     fgets(str, sizeof(str), file);
 
@@ -114,6 +121,7 @@ unsigned int read_fd(struct PROCINFO *info) {
                 info[idx].pid = atoi(pid->d_name);
                 info[idx].inode = inode;
                 read_cmdline(pid->d_name, &info[idx]);
+                idx++;
             }
         }
     }
@@ -145,4 +153,17 @@ char is_str_digit(char *str) {
     }
 
     return true;
+}
+
+void show(struct PROCINFO *info, unsigned int ninfo, struct CONNECTION *connections, unsigned int nconn, int type) {
+    const char *prefix = TYPE[type];
+
+    for (unsigned int i = 0; i < nconn; i++) {
+        for (unsigned int j = 0; j < ninfo; j++) {
+            if (connections[i].inode == info[j].inode) {
+                printf("%s\t%s:%u\t%s:%u\t%d/%s\n", prefix, connections[i].local_ip, connections[i].local_port, connections[i].rmt_ip, connections[i].rmt_port, info[j].pid, info[j].cmdline);
+            }
+        }
+    }
+
 }
