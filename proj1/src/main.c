@@ -8,12 +8,13 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <regex.h>
+#include <getopt.h>
 
 #define false 0
 #define true 1
 
 struct CONN {
-    char local_ip[32], rmt_ip[32];
+    char local_ip[32], rmt_ip[32], *type;
     unsigned short int local_port, rmt_port;
     unsigned int inode;
 };
@@ -29,22 +30,51 @@ unsigned int read_fd(struct PROCINFO *info);
 // TODO: Try not to pass entire `info` into read_cmdline
 void read_cmdline(char *pid, struct PROCINFO *info);
 char is_str_digit(char *str);
-void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigned int nconn, int type, char *filter);
+void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigned int nconn, char *filter);
 
 
-const char TYPE[][8] = {"tcp", "udp", "tcp6", "udp6"};
+const char TYPE[][8] = {"tcp", "tcp6", "udp", "udp6"};
+
+const struct option opts[] = {
+    {"tcp", 0, NULL, 't'},
+    {"udp", 0, NULL, 'u'}
+};
+
+const char *optstring = "tu";
 
 
-int main() {
+int main(int argc, const char *argv[]) {
     struct PROCINFO info[1024];
-    unsigned int nconn[4], ninfo = 0;
+    unsigned int nconn[4], ninfo = 0, type = 0x1111;
     struct CONN conns[4][1024];
+    char *filter = ".";
+
+    int c;
+    while ((c = getopt_long(argc, argv, optstring, opts, NULL)) != -1) {
+        switch (c) {
+            case 't':
+                type &= 0x0011;
+                break;
+            case 'u':
+                type &= 0x1100;
+                break;
+            default:
+                printf("%s [-t|--tcp] [-u|--udp] [filter-string]\n", argv[0]);
+                return 1;
+        }
+    }
+    
+    if (optind < argc) {
+        filter = argv[optind];
+    }
 
     ninfo = read_fd(info);
 
-    for (int i = 0; i < 2; i++) {
-        nconn[i] = read_conn(conns[i], i);
-        show(info, ninfo, conns[i], nconn[i], i, ".");
+    for (int i = 0; i < 4; i++) {
+        if (type >> i & 0x1) {
+            nconn[i] = read_conn(conns[i], i);
+            show(info, ninfo, conns[i], nconn[i], filter);
+        }
     }
 
     return 0;
@@ -77,6 +107,7 @@ unsigned int read_conn(struct CONN *list, int type) {
         list[idx].local_port = local_port;
         list[idx].rmt_port = rmt_port;
         list[idx].inode = inode;
+        list[idx].type = TYPE[type];
     }
     
     return idx;
@@ -155,8 +186,7 @@ char is_str_digit(char *str) {
     return true;
 }
 
-void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigned int nconn, int type, char *filter) {
-    const char *prefix = TYPE[type];
+void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigned int nconn, char *filter) {
     regex_t regex;
 
     regcomp(&regex, filter, 0);
@@ -164,7 +194,7 @@ void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigne
     for (unsigned int i = 0; i < nconn; i++) {
         for (unsigned int j = 0; j < ninfo; j++) {
             if (conns[i].inode == info[j].inode && regexec(&regex, info[j].cmdline, 0, NULL, 0) == 0) {
-                printf("%s\t%s:%u\t%s:%u", prefix, conns[i].local_ip, conns[i].local_port, conns[i].rmt_ip, conns[i].rmt_port);
+                printf("%s\t%s:%u\t%s:%u", conns[i].type, conns[i].local_ip, conns[i].local_port, conns[i].rmt_ip, conns[i].rmt_port);
                 printf("\t%d/%s\n", info[j].pid, info[j].cmdline);
             }
         }
