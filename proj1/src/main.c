@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
+#include <regex.h>
 
 #define false 0
 #define true 1
@@ -28,7 +29,7 @@ unsigned int read_fd(struct PROCINFO *info);
 // TODO: Try not to pass entire `info` into read_cmdline
 void read_cmdline(char *pid, struct PROCINFO *info);
 char is_str_digit(char *str);
-void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigned int nconn, int type);
+void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigned int nconn, int type, char *filter);
 
 
 const char TYPE[][8] = {"tcp", "udp", "tcp6", "udp6"};
@@ -41,22 +42,22 @@ int main() {
 
     ninfo = read_fd(info);
 
-    nconn[0] = read_conn(conns[0], 0);
-    nconn[1] = read_conn(conns[1], 1);
-
-    show(info, ninfo, conns[0], nconn[0], 0);
-    show(info, ninfo, conns[1], nconn[1], 1);
+    for (int i = 0; i < 2; i++) {
+        nconn[i] = read_conn(conns[i], i);
+        show(info, ninfo, conns[i], nconn[i], i, ".");
+    }
 
     return 0;
 }
 
 unsigned int read_conn(struct CONN *list, int type) {
     unsigned int idx, dummy, local_ip, local_port, rmt_ip, rmt_port, inode;
-    char str[256], filename[256];
+    char str[512], filename[256];
     
     sprintf(filename, "/proc/net/%s", TYPE[type]);
     FILE *file = fopen(filename, "r");
     
+    // Skip first line
     fgets(str, sizeof(str), file);
 
     for (idx = 0; fscanf(file, "%u:", &dummy) != EOF; idx++) {
@@ -68,9 +69,8 @@ unsigned int read_conn(struct CONN *list, int type) {
 
         fscanf(file, "%u", &inode);
         
-        for (int i = 0, n = (type & 1 ? 3 : 7); i < n; i++) {
-            fscanf(file, "%s", str);
-        }
+        // Read until line end
+        fgets(str, sizeof(str), file);
 
         inet_ntop(AF_INET, &local_ip, list[idx].local_ip, INET_ADDRSTRLEN);
         inet_ntop(AF_INET, &rmt_ip, list[idx].rmt_ip, INET_ADDRSTRLEN);
@@ -155,15 +155,18 @@ char is_str_digit(char *str) {
     return true;
 }
 
-void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigned int nconn, int type) {
+void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigned int nconn, int type, char *filter) {
     const char *prefix = TYPE[type];
+    regex_t regex;
+
+    regcomp(&regex, filter, 0);
 
     for (unsigned int i = 0; i < nconn; i++) {
         for (unsigned int j = 0; j < ninfo; j++) {
-            if (conns[i].inode == info[j].inode) {
-                printf("%s\t%s:%u\t%s:%u\t%d/%s\n", prefix, conns[i].local_ip, conns[i].local_port, conns[i].rmt_ip, conns[i].rmt_port, info[j].pid, info[j].cmdline);
+            if (conns[i].inode == info[j].inode && regexec(&regex, info[j].cmdline, 0, NULL, 0) == 0) {
+                printf("%s\t%s:%u\t%s:%u", prefix, conns[i].local_ip, conns[i].local_port, conns[i].rmt_ip, conns[i].rmt_port);
+                printf("\t%d/%s\n", info[j].pid, info[j].cmdline);
             }
         }
     }
-
 }
