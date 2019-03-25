@@ -243,4 +243,6 @@ void show(struct PROCINFO *info, unsigned int ninfo, struct CONN *conns, unsigne
             }
         }
     }
+
+    regfree(&regex);
 }
