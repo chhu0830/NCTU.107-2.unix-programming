@@ -8,7 +8,17 @@
 * [30%] Show corresponding program names and arguments for each identified connection.
 * [10%] Implement -u and --udp option using getopt\_long(3).
 * [10%] Implement -t and --tcp option using getopt\_long(3).
-* [10%] Translate network address into user-friendly formats, e.g., from 0100007F to 127.0.0.1, and from FE01A8C0 to 192.168.1.254.
+* [10%] Translate network address into user-friendly formats, e.g., from `0100007F` to `127.0.0.1`, and from `FE01A8C0` to `192.168.1.254`.
 * [10%] Implement basic filter string feature.
 * [10%] Use Makefile to manage the building process of your program.
 * [10%] If your filter string supports regular expression, see regex(3).
+
+
+## Project2
+### Requirements
+* [10%] A monitored executable can work as usual. Your program cannot break the functions of a monitored executable.
+* [20%] Monitor functions listed in minimum requirements.
+* [20%] Provide basic list for function call parameters and return values.
+* [20%] Provide comprehensive list for function call parameters and return values.
+* [20%] Output can be configured using `MONITOR_OUTPUT` environmental variable.
+* [10%] Use Makefile to manage the building process of your program. We will not grade your program if we cannot use make command to build your program.
