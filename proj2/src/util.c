@@ -2,6 +2,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <pwd.h>
+#include <grp.h>
+
 #include "util.h"
 
 
@@ -17,15 +20,38 @@ char* fd2name(int fildes) {
 }
 
 char* stream2name(FILE *stream) {
-    static char name[1024];
-    
-    if (stream == stdin) {
+    int fd = fileno(stream);
+    if (fd == STDIN_FILENO) {
         return "<STDIN>";
-    } else if (stream == stdout) {
+    } else if (fd == STDOUT_FILENO) {
         return "<STDOUT>";
-    } else if (stream == stderr) {
+    } else if (fd == STDERR_FILENO) {
         return "<STDERR>";
     } else {
         return fd2name(fileno(stream));
     }
+}
+
+char* uid2name(uid_t uid) {
+    struct passwd *pwd;
+    
+    pwd = getpwuid(uid);
+
+    return pwd->pw_name;
+}
+
+char* gid2name(gid_t gid) {
+    struct group *grp;
+    
+    grp = getgrgid(gid);
+    
+    return grp->gr_name;
+}
+
+char* dirent_handler(struct dirent *ent) {
+    return (ent == NULL ? "NULL" : ent->d_name);
+}
+
+char* str_handler(char *str) {
+    return (str == NULL ? "NULL" : str);
 }
