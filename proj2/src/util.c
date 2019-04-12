@@ -21,6 +21,7 @@ char* fd2name(int fildes) {
 
 char* stream2name(FILE *stream) {
     int fd = fileno(stream);
+
     if (fd == STDIN_FILENO) {
         return "<STDIN>";
     } else if (fd == STDOUT_FILENO) {
