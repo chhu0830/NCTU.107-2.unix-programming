@@ -70,26 +70,23 @@ int fprintf(FILE *stream, const char *format, ...) {
     return ret;
 }
 
-// FIXME: dir2name
 FUNC(int, closedir,
         LIST(DIR *dirp),
-        LIST(dirp),,
-        (%p) = %d,
-        LIST((void*)dirp, ret))
+        LIST(dirp), char *name = fd2name(dirfd(dirp));,
+        ("%s") = %d,
+        LIST(name, ret))
 
-// FIXME: dir2name
 FUNC(DIR*, opendir,
         LIST(const char *name),
         LIST(name),,
-        ("%s") = %p,
-        LIST(name, ret))
+        ("%s") = %s,
+        LIST(name, fd2name(dirfd(ret))))
 
-// FIXME: dir2name
 FUNC(struct dirent*, readdir,
         LIST(DIR *dirp),
-        LIST(dirp),,
-        (%p) = %s,
-        LIST((void*)dirp, dirent_handler(ret)))
+        LIST(dirp), char *name = fd2name(dirfd(dirp));,
+        ("%s") = %s,
+        LIST(name, dirent_handler(ret)))
 
 FUNC(int, creat,
         LIST(const char *path, mode_t mode),
@@ -104,7 +101,6 @@ FUNC(int, open,
         ("%s", %x) = %d,
         LIST(path, oflag, ret))
 
-// FIXME: no read?
 FUNC(ssize_t, read,
         LIST(int fildes, void *buf, size_t nbyte),
         LIST(fildes, buf, nbyte),,
@@ -230,7 +226,7 @@ FUNC(int, link,
 
 FUNC(int, unlink,
         LIST(const char *path),
-        LIST(path),
+        LIST(path),,
         ("%s") = %d,
         LIST(path, ret))
 
@@ -254,6 +250,6 @@ FUNC(int, mkdir,
 
 FUNC(int, rmdir,
         LIST(const char *path),
-        LIST(path),
+        LIST(path),,
         ("%s") = %d,
         LIST(path, ret))

@@ -1,5 +1,5 @@
 CC					?= gcc
-CFLAGS				+= -std=c11 -Wall -Wextra -pedantic -MMD -MF $@.d -fPIC
+CFLAGS				+= -std=gnu99 -Wall -Wextra -pedantic -MMD -MF $@.d -fPIC
 LDFLAGS				+= -shared -ldl
 
 STUDENT_ID			:= 0756020
