@@ -1,6 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 
+#include <fcntl.h>
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <sys/stat.h>
@@ -21,7 +23,7 @@
         preprocess                                                          \
                                                                             \
         type ret = exportname##_libc(args2);                                \
-        fprintf_util(OUTPUT, "%s"#fmt"\n",                                  \
+        dprintf_util(OUTPUT, "%s"#fmt"\n",                                  \
                      (#funcname[0] ? #funcname : #exportname), args3);      \
                                                                             \
         return ret;                                                         \
@@ -30,15 +32,25 @@
 #define LIST(...) __VA_ARGS__
 
 
-FILE *OUTPUT = NULL;
+int OUTPUT = -1;
 void *libc = NULL;
-static int (*fprintf_util)(FILE *stream, const char *format, ...) = NULL;
+static int (*dprintf_util)(int fd, const char *format, ...) = NULL;
+static int (*open_util)(const char *path, int oflag, mode_t mode) = NULL; 
+static int (*fileno_util)(FILE *stream) = NULL;
 
 
 __attribute__((constructor)) static void load_libc() {
     libc = dlopen("libc.so.6", RTLD_LAZY);
-    OUTPUT = stderr;
-    *(void **)(&fprintf_util) = dlsym(libc, "fprintf");
+
+    *(void **)(&dprintf_util) = dlsym(libc, "dprintf");
+    *(void **)(&open_util) = dlsym(libc, "open");
+    *(void **)(&fileno_util) = dlsym(libc, "fileno");
+
+    if (getenv("MONITOR_OUTPUT")) {
+        OUTPUT = open_util(getenv("MONITOR_OUTPUT"), O_WRONLY | O_CREAT, 0644);
+    } else {
+        OUTPUT = fileno_util(stderr);
+    }
 }
 
 
@@ -52,7 +64,9 @@ int fscanf(FILE *stream, const char *format, ...) {
     va_start(ap, format);
 
     int ret = vfscanf_libc(stream, format, ap);
-    fprintf_util(OUTPUT, "fscanf(\"%s\", \"%s\", ...) = %d\n", stream2name(stream), format, ret);
+    dprintf_util(OUTPUT, "fscanf(\"%s\", \"%s\", ...) = %d\n", stream2name(stream), format, ret);
+
+    va_end(ap);
 
     return ret;
 }
@@ -67,7 +81,9 @@ int fprintf(FILE *stream, const char *format, ...) {
     va_start(ap, format);
 
     int ret = vfprintf_libc(stream, format, ap);
-    fprintf_util(OUTPUT, "fprintf(\"%s\", \"%s\", ...) = %d\n", stream2name(stream), format, ret);
+    dprintf_util(OUTPUT, "fprintf(\"%s\", \"%s\", ...) = %d\n", stream2name(stream), format, ret);
+
+    va_end(ap);
 
     return ret;
 }
@@ -96,12 +112,32 @@ FUNC(int, creat,,
         ("%s", %05o) = %d,
         LIST(path, mode, ret))
 
-// FIXME: flag2string?, int open(const char *path, int oflag, ...)
-FUNC(int, open,,
-        LIST(const char *path, int oflag),
-        LIST(path, oflag),,
-        ("%s", %x) = %d,
-        LIST(path, oflag, ret))
+static int (*open_libc)(const char *path, int oflag, ...) = NULL;
+int open(const char *path, int oflag, ...) {
+    if (open_libc == NULL) {
+        *(void **)(&open_libc) = dlsym(libc, "open");
+    }
+
+    va_list ap;
+    va_start(ap, oflag);
+
+    int ret;
+    unsigned int mode;
+
+    if ((oflag & O_CREAT) == O_CREAT) {
+        mode = va_arg(ap, unsigned int);
+
+        ret = open_libc(path, oflag, mode);
+        dprintf_util(OUTPUT, "open(\"%s\", %x, %o) = %d\n", path, oflag, mode, ret);
+    } else {
+        ret = open_libc(path, oflag);
+        dprintf_util(OUTPUT, "open(\"%s\", %x) = %d\n", path, oflag, ret);
+    }
+
+    va_end(ap);
+
+    return ret;
+}
 
 FUNC(ssize_t, read,,
         LIST(int fildes, void *buf, size_t nbyte),
