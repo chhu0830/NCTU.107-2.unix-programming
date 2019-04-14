@@ -47,7 +47,7 @@ __attribute__((constructor)) static void load_libc() {
     *(void **)(&fileno_util) = dlsym(libc, "fileno");
 
     if (getenv("MONITOR_OUTPUT")) {
-        OUTPUT = open_util(getenv("MONITOR_OUTPUT"), O_WRONLY | O_CREAT, 0644);
+        OUTPUT = open_util(getenv("MONITOR_OUTPUT"), O_WRONLY | O_TRUNC | O_CREAT, 0644);
     } else {
         OUTPUT = fileno_util(stderr);
     }
