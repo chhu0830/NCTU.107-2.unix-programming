@@ -2,25 +2,48 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <dlfcn.h>
+
 #include <pwd.h>
 #include <grp.h>
 
 #include "util.h"
 
 
+#define LOAD(name) if (name##_util == NULL) *(void **)(&name##_util) = dlsym(libc_util, #name)
+
+
+void *libc_util = NULL;
+static int (*sprintf_util)(char *str, const char *format, ...) = NULL;
+static void (*memset_util)(void *s, int c, size_t n) = NULL;
+static ssize_t (*readlink_util)(const char *restrict path, char *restrict buf, size_t bufsize) = NULL;
+static int (*fileno_util)(FILE *stream) = NULL;
+static struct passwd* (*getpwuid_util)(uid_t uid) = NULL;
+static struct group* (*getgrgid_util)(gid_t gid) = NULL;
+
+__attribute__((constructor)) static void load_libc() {
+    libc_util = dlopen("libc.so.6", RTLD_LAZY);
+}
+
 char* fd2name(int fildes) {
+    LOAD(sprintf);
+    LOAD(memset);
+    LOAD(readlink);
+
     static char path[256], name[1024];
 
-    sprintf(path, "/proc/self/fd/%d", fildes);
-    memset(name, 0, sizeof(name));
+    sprintf_util(path, "/proc/self/fd/%d", fildes);
+    memset_util(name, 0, sizeof(name));
 
-    readlink(path, name, sizeof(name));
+    readlink_util(path, name, sizeof(name));
 
     return name;
 }
 
 char* stream2name(FILE *stream) {
-    int fd = fileno(stream);
+    LOAD(fileno);
+    
+    int fd = fileno_util(stream);
 
     if (fd == STDIN_FILENO) {
         return "<STDIN>";
@@ -34,17 +57,21 @@ char* stream2name(FILE *stream) {
 }
 
 char* uid2name(uid_t uid) {
+    LOAD(getpwuid);
+
     struct passwd *pwd;
     
-    pwd = getpwuid(uid);
+    pwd = getpwuid_util(uid);
 
     return pwd->pw_name;
 }
 
 char* gid2name(gid_t gid) {
+    LOAD(getgrgid);
+
     struct group *grp;
     
-    grp = getgrgid(gid);
+    grp = getgrgid_util(gid);
     
     return grp->gr_name;
 }
