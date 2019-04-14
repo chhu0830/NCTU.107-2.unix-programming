@@ -10,17 +10,19 @@
 #include "util.h"
 
 
-#define FUNC(type, name, name2, args1, args2, preprocess, fmt, args3)       \
-    static type (*name##_libc)(args1) = NULL;                               \
-    type name(args1) {                                                      \
-        if (name##_libc == NULL) {                                          \
-            *(void **)(&name##_libc) = dlsym(libc, #name);                  \
+#define FUNC(type, exportname, funcname, args1, args2,                      \
+             preprocess, fmt, args3)                                        \
+    static type (*exportname##_libc)(args1) = NULL;                         \
+    type exportname(args1) {                                                \
+        if (exportname##_libc == NULL) {                                    \
+            *(void **)(&exportname##_libc) = dlsym(libc, #exportname);      \
         }                                                                   \
                                                                             \
         preprocess                                                          \
                                                                             \
-        type ret = name##_libc(args2);                                      \
-        fprintf_util(OUTPUT, "%s"#fmt"\n", (#name2[0] ? #name2 : #name), args3);\
+        type ret = exportname##_libc(args2);                                \
+        fprintf_util(OUTPUT, "%s"#fmt"\n",                                  \
+                     (#funcname[0] ? #funcname : #exportname), args3);      \
                                                                             \
         return ret;                                                         \
     }                                                                       \
