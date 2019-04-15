@@ -1,6 +1,9 @@
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #include <fcntl.h>
 #include <dlfcn.h>
@@ -20,6 +23,10 @@
              preprocess, fmt, args3)                                        \
     static type (*exportname##_libc)(args1) = NULL;                         \
     type exportname(args1) {                                                \
+        if (libc == NULL) {                                                   \
+            initialize();                                                   \
+        }                                                                   \
+                                                                            \
         if (exportname##_libc == NULL) {                                    \
             *(void **)(&exportname##_libc) = dlsym(libc, #exportname);      \
         }                                                                   \
@@ -33,25 +40,36 @@
         return ret;                                                         \
     }                                                                       \
 
+#define LOAD(name)                                                          \
+    if (name##_util == NULL) *(void **)(&name##_util) = dlsym(libc, #name)
+
 
 int OUTPUT = -1;
 void *libc = NULL;
 static int (*dprintf_util)(int fd, const char *format, ...) = NULL;
 static int (*open_util)(const char *path, int oflag, mode_t mode) = NULL; 
 static int (*fileno_util)(FILE *stream) = NULL;
+static int (*dup_util)(int fildes) = NULL;
 
 
-__attribute__((constructor)) static void init() {
+void initialize() {
     libc = dlopen("libc.so.6", RTLD_LAZY);
 
-    *(void **)(&dprintf_util) = dlsym(libc, "dprintf");
-    *(void **)(&open_util) = dlsym(libc, "open");
-    *(void **)(&fileno_util) = dlsym(libc, "fileno");
+    LOAD(dprintf);
+    LOAD(open);
+    LOAD(fileno);
+    LOAD(dup);
 
     if (getenv("MONITOR_OUTPUT")) {
         OUTPUT = open_util(getenv("MONITOR_OUTPUT"), O_WRONLY | O_TRUNC | O_CREAT, 0644);
     } else {
         OUTPUT = fileno_util(stderr);
+    }
+}
+
+__attribute__((constructor)) static void init() {
+    if (libc == NULL) {
+        initialize();
     }
 }
 
@@ -195,10 +213,12 @@ FUNC(FILE*, fopen,,
         ("%s", "%s") = %p,
         LIST(pathname, mode, ret))
 
-// FIXME: stderr close, can not show
 FUNC(int, fclose,,
         LIST(FILE *stream),
-        LIST(stream), char *name = stream2name(stream);,
+        LIST(stream),
+        char *name = stream2name(stream);
+        if (fileno_util(stream) == OUTPUT)
+            OUTPUT = dup_util(STDERR_FILENO);,
         ("%s") = %d,
         LIST(name, ret))
 
@@ -271,8 +291,8 @@ FUNC(int, unlink,,
 FUNC(ssize_t, readlink,,
         LIST(const char *restrict path, char *restrict buf, size_t bufsize),
         LIST(path, buf, bufsize),,
-        ("%s", %p, %zu) = %zd,
-        LIST(path, buf, bufsize, ret))
+        ("%s", %p ("%s"), %zu) = %zd,
+        LIST(path, buf, buf, bufsize, ret))
 
 FUNC(int, symlink,,
         LIST(const char *path1, const char *path2),

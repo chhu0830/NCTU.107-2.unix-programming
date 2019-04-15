@@ -10,7 +10,9 @@
 #include "util.h"
 
 
-#define LOAD(name) if (name##_util == NULL) *(void **)(&name##_util) = dlsym(libc_util, #name)
+#define LOAD(name)                                                          \
+    if (name##_util == NULL)                                                \
+        *(void **)(&name##_util) = dlsym(libc_util, #name)
 
 
 void *libc_util = NULL;
@@ -22,15 +24,29 @@ static struct passwd* (*getpwuid_util)(uid_t uid) = NULL;
 static struct group* (*getgrgid_util)(gid_t gid) = NULL;
 
 __attribute__((constructor)) static void load_libc() {
-    libc_util = dlopen("libc.so.6", RTLD_LAZY);
+    if (libc_util == NULL) {
+        libc_util = dlopen("libc.so.6", RTLD_LAZY);
+    }
 }
 
 char* fd2name(int fildes) {
+    if (libc_util == NULL) {
+        libc_util = dlopen("libc.so.6", RTLD_LAZY);
+    }
+
     LOAD(sprintf);
     LOAD(memset);
     LOAD(readlink);
 
     static char path[256], name[1024];
+
+    if (fildes == STDIN_FILENO) {
+        return "<STDIN>";
+    } else if (fildes == STDOUT_FILENO) {
+        return "<STDOUT>";
+    } else if (fildes == STDERR_FILENO) {
+        return "<STDERR>";
+    }
 
     sprintf_util(path, "/proc/self/fd/%d", fildes);
     memset_util(name, 0, sizeof(name));
@@ -41,22 +57,20 @@ char* fd2name(int fildes) {
 }
 
 char* stream2name(FILE *stream) {
+    if (libc_util == NULL) {
+        libc_util = dlopen("libc.so.6", RTLD_LAZY);
+    }
+
     LOAD(fileno);
     
-    int fd = fileno_util(stream);
-
-    if (fd == STDIN_FILENO) {
-        return "<STDIN>";
-    } else if (fd == STDOUT_FILENO) {
-        return "<STDOUT>";
-    } else if (fd == STDERR_FILENO) {
-        return "<STDERR>";
-    } else {
-        return fd2name(fileno(stream));
-    }
+    return fd2name(fileno_util(stream));
 }
 
 char* uid2name(uid_t uid) {
+    if (libc_util == NULL) {
+        libc_util = dlopen("libc.so.6", RTLD_LAZY);
+    }
+
     LOAD(getpwuid);
 
     struct passwd *pwd;
