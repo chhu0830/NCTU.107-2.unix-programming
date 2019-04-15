@@ -12,6 +12,10 @@
 #include "util.h"
 
 
+#define LIST(...) __VA_ARGS__
+
+#define COLOR(msg) "\033[0;33m"msg"\033[0m"
+
 #define FUNC(type, exportname, funcname, args1, args2,                      \
              preprocess, fmt, args3)                                        \
     static type (*exportname##_libc)(args1) = NULL;                         \
@@ -23,13 +27,11 @@
         preprocess                                                          \
                                                                             \
         type ret = exportname##_libc(args2);                                \
-        dprintf_util(OUTPUT, "%s"#fmt"\n",                                  \
+        dprintf_util(OUTPUT, COLOR("# %s"#fmt"\n"),                         \
                      (#funcname[0] ? #funcname : #exportname), args3);      \
                                                                             \
         return ret;                                                         \
     }                                                                       \
-
-#define LIST(...) __VA_ARGS__
 
 
 int OUTPUT = -1;
@@ -39,7 +41,7 @@ static int (*open_util)(const char *path, int oflag, mode_t mode) = NULL;
 static int (*fileno_util)(FILE *stream) = NULL;
 
 
-__attribute__((constructor)) static void load_libc() {
+__attribute__((constructor)) static void init() {
     libc = dlopen("libc.so.6", RTLD_LAZY);
 
     *(void **)(&dprintf_util) = dlsym(libc, "dprintf");
@@ -64,7 +66,7 @@ int fscanf(FILE *stream, const char *format, ...) {
     va_start(ap, format);
 
     int ret = vfscanf_libc(stream, format, ap);
-    dprintf_util(OUTPUT, "fscanf(\"%s\", \"%s\", ...) = %d\n", stream2name(stream), format, ret);
+    dprintf_util(OUTPUT, COLOR("# fscanf(\"%s\", \"%s\", ...) = %d\n"), stream2name(stream), format, ret);
 
     va_end(ap);
 
@@ -81,7 +83,34 @@ int fprintf(FILE *stream, const char *format, ...) {
     va_start(ap, format);
 
     int ret = vfprintf_libc(stream, format, ap);
-    dprintf_util(OUTPUT, "fprintf(\"%s\", \"%s\", ...) = %d\n", stream2name(stream), format, ret);
+    dprintf_util(OUTPUT, COLOR("# fprintf(\"%s\", \"%s\", ...) = %d\n"), stream2name(stream), format, ret);
+
+    va_end(ap);
+
+    return ret;
+}
+
+static int (*open_libc)(const char *path, int oflag, ...) = NULL;
+int open(const char *path, int oflag, ...) {
+    if (open_libc == NULL) {
+        *(void **)(&open_libc) = dlsym(libc, "open");
+    }
+
+    va_list ap;
+    va_start(ap, oflag);
+
+    int ret;
+    unsigned int mode;
+
+    if ((oflag & O_CREAT) == O_CREAT) {
+        mode = va_arg(ap, unsigned int);
+
+        ret = open_libc(path, oflag, mode);
+        dprintf_util(OUTPUT, COLOR("# open(\"%s\", %x, %o) = %d\n"), path, oflag, mode, ret);
+    } else {
+        ret = open_libc(path, oflag);
+        dprintf_util(OUTPUT, COLOR("# open(\"%s\", %x) = %d\n"), path, oflag, ret);
+    }
 
     va_end(ap);
 
@@ -111,33 +140,6 @@ FUNC(int, creat,,
         LIST(path, mode),,
         ("%s", %05o) = %d,
         LIST(path, mode, ret))
-
-static int (*open_libc)(const char *path, int oflag, ...) = NULL;
-int open(const char *path, int oflag, ...) {
-    if (open_libc == NULL) {
-        *(void **)(&open_libc) = dlsym(libc, "open");
-    }
-
-    va_list ap;
-    va_start(ap, oflag);
-
-    int ret;
-    unsigned int mode;
-
-    if ((oflag & O_CREAT) == O_CREAT) {
-        mode = va_arg(ap, unsigned int);
-
-        ret = open_libc(path, oflag, mode);
-        dprintf_util(OUTPUT, "open(\"%s\", %x, %o) = %d\n", path, oflag, mode, ret);
-    } else {
-        ret = open_libc(path, oflag);
-        dprintf_util(OUTPUT, "open(\"%s\", %x) = %d\n", path, oflag, ret);
-    }
-
-    va_end(ap);
-
-    return ret;
-}
 
 FUNC(ssize_t, read,,
         LIST(int fildes, void *buf, size_t nbyte),
