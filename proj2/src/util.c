@@ -23,20 +23,29 @@ static int (*fileno_util)(FILE *stream) = NULL;
 static struct passwd* (*getpwuid_util)(uid_t uid) = NULL;
 static struct group* (*getgrgid_util)(gid_t gid) = NULL;
 
-__attribute__((constructor)) static void load_libc() {
-    if (libc_util == NULL) {
-        libc_util = dlopen("libc.so.6", RTLD_LAZY);
-    }
-}
 
-char* fd2name(int fildes) {
-    if (libc_util == NULL) {
-        libc_util = dlopen("libc.so.6", RTLD_LAZY);
-    }
+void initialize_util() {
+    libc_util = dlopen("libc.so.6", RTLD_LAZY);
 
     LOAD(sprintf);
     LOAD(memset);
     LOAD(readlink);
+    LOAD(fileno);
+    LOAD(getpwuid);
+    LOAD(getgrgid);
+}
+
+__attribute__((constructor)) static void load_libc() {
+    if (libc_util == NULL) {
+        initialize_util();
+    }
+}
+
+
+char* fd2name(int fildes) {
+    if (libc_util == NULL) {
+        initialize_util();
+    }
 
     static char path[256], name[1024];
 
@@ -58,20 +67,16 @@ char* fd2name(int fildes) {
 
 char* stream2name(FILE *stream) {
     if (libc_util == NULL) {
-        libc_util = dlopen("libc.so.6", RTLD_LAZY);
+        initialize_util();
     }
 
-    LOAD(fileno);
-    
     return fd2name(fileno_util(stream));
 }
 
 char* uid2name(uid_t uid) {
     if (libc_util == NULL) {
-        libc_util = dlopen("libc.so.6", RTLD_LAZY);
+        initialize_util();
     }
-
-    LOAD(getpwuid);
 
     struct passwd *pwd;
     
@@ -81,7 +86,9 @@ char* uid2name(uid_t uid) {
 }
 
 char* gid2name(gid_t gid) {
-    LOAD(getgrgid);
+    if (libc_util == NULL) {
+        initialize_util();
+    }
 
     struct group *grp;
     

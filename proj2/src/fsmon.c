@@ -23,7 +23,7 @@
              preprocess, fmt, args3)                                        \
     static type (*exportname##_libc)(args1) = NULL;                         \
     type exportname(args1) {                                                \
-        if (libc == NULL) {                                                   \
+        if (libc == NULL) {                                                 \
             initialize();                                                   \
         }                                                                   \
                                                                             \
@@ -38,7 +38,7 @@
                      (#funcname[0] ? #funcname : #exportname), args3);      \
                                                                             \
         return ret;                                                         \
-    }                                                                       \
+    }
 
 #define LOAD(name)                                                          \
     if (name##_util == NULL) *(void **)(&name##_util) = dlsym(libc, #name)
