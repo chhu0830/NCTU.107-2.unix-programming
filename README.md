@@ -1,7 +1,7 @@
 # NCTU.107-2.unix-programming
 
 
-## Project1
+## Project1 - netstat -nap
 ### Requirements
 * [10%] List TCP and UDP connetions (IPv4).
 * [10%] List TCP and UDP connetions (IPv6).
@@ -14,7 +14,7 @@
 * [10%] If your filter string supports regular expression, see regex(3).
 
 
-## Project2
+## Project2 - Library Call Monitor
 ### Requirements
 * [10%] A monitored executable can work as usual. Your program cannot break the functions of a monitored executable.
 * [20%] Monitor functions listed in minimum requirements.
