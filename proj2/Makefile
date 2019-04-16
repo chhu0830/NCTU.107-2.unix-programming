@@ -19,7 +19,9 @@ $(OUT)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $< -o $@ -c $(CFLAGS)
 
-run: $(EXECUTABLE)
+test: $(EXECUTABLE)
+	MONITOR_OUTPUT=fsmon.log LD_PRELOAD=./$(EXECUTABLE) head -n 1000 /etc/services > /dev/null
+	LD_PRELOAD=./$(EXECUTABLE) ls -la
 
 zip:
 	@rm -rf $(STUDENT_ID) $(STUDENT_ID).zip ; mkdir $(STUDENT_ID)
