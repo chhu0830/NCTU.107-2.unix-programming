@@ -19,7 +19,7 @@ netstat -nap
 * Fix parameters in inet\_ntop for IPv6 rmt ip address
   > -5
 * Close opened dir
-  > * 0.8
+  > \* 0.8  
   > Cause Segmentation Fault
 * Increase PROCESS\_NUM
 
