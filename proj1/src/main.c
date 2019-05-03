@@ -10,8 +10,12 @@
 #include <regex.h>
 #include <getopt.h>
 
+
 #define false 0
 #define true 1
+// FIXME: Make sure these number is enough
+#define MAX_PROCESS_NUM 10000
+#define MAX_CONN_NUM 1024
 
 
 struct CONN {
@@ -45,9 +49,9 @@ const char *optstring = "tu";
 
 
 int main(int argc, const char *argv[]) {
-    struct PROCINFO info[1024];
+    struct PROCINFO info[MAX_PROCESS_NUM];
     unsigned int nconn[4], ninfo = 0, type = 0xF;
-    struct CONN conns[4][1024];
+    struct CONN conns[4][MAX_CONN_NUM];
     char *filter = "";
 
     int c;
@@ -124,7 +128,7 @@ unsigned int read_conn(struct CONN *list, int type) {
         const int ADDRSTRLEN = (type & 1 ? INET6_ADDRSTRLEN : INET_ADDRSTRLEN);
 
         inet_ntop(AF, &local_ip, list[idx].local_ip, ADDRSTRLEN);
-        inet_ntop(AF, &rmt_ip, list[idx].rmt_ip, INET_ADDRSTRLEN);
+        inet_ntop(AF, &rmt_ip, list[idx].rmt_ip, ADDRSTRLEN);
         list[idx].local_port = local_port;
         list[idx].rmt_port = rmt_port;
         list[idx].inode = inode;
@@ -176,6 +180,8 @@ unsigned int read_fd(struct PROCINFO *info) {
                 idx++;
             }
         }
+
+        closedir(fd);
     }
 
     return idx;

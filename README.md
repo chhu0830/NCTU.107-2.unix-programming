@@ -1,7 +1,9 @@
 # NCTU.107-2.unix-programming
 
 
-## Project1 - netstat -nap
+## Project1
+netstat -nap
+
 ### Requirements
 * [10%] List TCP and UDP connetions (IPv4).
 * [10%] List TCP and UDP connetions (IPv6).
@@ -13,8 +15,18 @@
 * [10%] Use Makefile to manage the building process of your program.
 * [10%] If your filter string supports regular expression, see regex(3).
 
+### Patch (84%)
+* Fix parameters in inet\_ntop for IPv6 rmt ip address
+  > -5
+* Close opened dir
+  > * 0.8
+  > Cause Segmentation Fault
+* Increase PROCESS\_NUM
 
-## Project2 - Library Call Monitor
+
+## Project2
+Library Call Monitor
+
 ### Requirements
 * [10%] A monitored executable can work as usual. Your program cannot break the functions of a monitored executable.
 * [20%] Monitor functions listed in minimum requirements.
