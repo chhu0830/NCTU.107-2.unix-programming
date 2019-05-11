@@ -18,31 +18,41 @@
 #define SEP5(TYPE, NAME, ...) NAME, SEP4(__VA_ARGS__)
 #define SEP6(TYPE, NAME, ...) NAME, SEP5(__VA_ARGS__)
 
-#define WRAPPER(RET_TYPE, NAME, RET_VALUE, NUM, ...) \
-    RET_TYPE NAME(COMB(NUM, __VA_ARGS__)) { \
+#define WRAPPER(RET_TYPE, NAME, RET_ON_FAIL, NUM, ...)  \
+    RET_TYPE NAME(COMB(NUM, __VA_ARGS__)) {           \
         long ret = sys_##NAME(SEP(NUM, __VA_ARGS__)); \
-\
-        errno = 0; \
-\
-        if (ret < 0) { \
-            errno = -ret; \
-            return RET_VALUE; \
-        } \
-        return ((RET_TYPE) ret); \
+        RET_WRAP(RET_TYPE, RET_ON_FAIL)                 \
     }
 
-#define LIST(...) __VA_ARGS__
+#define RET_WRAP(RET_TYPE, RET_ON_FAIL)  \
+    errno = 0;                           \
+                                         \
+    if (ret < 0) {                       \
+        errno = -ret;                    \
+        return RET_ON_FAIL;              \
+    }                                    \
+    return ((RET_TYPE) ret);
 
 
 long errno;
 
 
 WRAPPER(ssize_t, write, -1, 3, int, fd, const void*, buf, size_t, count)
+
+int sigprocmask(int how, const sigset_t *set, sigset_t *oldset) {
+    long ret = sys_rt_sigprocmask(how, set, oldset, sizeof(sigset_t));
+    RET_WRAP(int, -1);
+}
 WRAPPER(int, pause, -1, 0)
 WRAPPER(unsigned int, alarm, -1, 1, unsigned int, secondes)
 
 void exit(int error_code) {
     sys_exit(error_code);
+}
+
+int sigpending(sigset_t *set) {
+    long ret = sys_rt_sigpending(set, sizeof(sigset_t));
+    RET_WRAP(int, -1);
 }
 
 size_t strlen(const char *s) {
@@ -106,4 +116,20 @@ void perror(const char *prefix) {
     write(STDERR_FILENO, "\n", 1);
 
     return;
+}
+
+unsigned int sleep(unsigned int seconds) {
+    struct timespec req, rem;
+
+    req.tv_sec = seconds;
+    req.tv_nsec = 0;
+
+    long ret = sys_nanosleep(&req, &rem);
+
+    if(ret >= 0) return ret;
+    if(ret == -EINTR) {
+        return rem.tv_sec;
+    }
+
+    return 0;
 }

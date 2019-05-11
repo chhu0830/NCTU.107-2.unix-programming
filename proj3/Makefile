@@ -31,9 +31,9 @@ $(OUT)/%.c.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $< -o $@ -c $(CFLAGS)
 
-test: $(OUT)/$(SRC)/start.asm.o $(OUT)/testcase/alarm1.c.o
-	$(LD) -m elf_x86_64 --dynamic-linker /lib64/ld-linux-x86-64.so.2 -o testcase/alarm1 $^ -L. -L.. -lmini
-	LD_LIBRARY_PATH=. testcase/alarm1
+test: $(OUT)/$(SRC)/start.asm.o $(OUT)/testcase/alarm2.c.o
+	$(LD) -m elf_x86_64 --dynamic-linker /lib64/ld-linux-x86-64.so.2 -o testcase/alarm2 $^ -L. -L.. -lmini
+	LD_LIBRARY_PATH=. testcase/alarm2
 
 
 zip:
