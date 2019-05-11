@@ -4,7 +4,7 @@
 ## Project1
 netstat -nap
 
-### Requirements
+### Grading Policy
 * [10%] List TCP and UDP connetions (IPv4).
 * [10%] List TCP and UDP connetions (IPv6).
 * [30%] Show corresponding program names and arguments for each identified connection.
@@ -27,10 +27,26 @@ netstat -nap
 ## Project2
 Library Call Monitor
 
-### Requirements
+### Grading Policy
 * [10%] A monitored executable can work as usual. Your program cannot break the functions of a monitored executable.
 * [20%] Monitor functions listed in minimum requirements.
 * [20%] Provide basic list for function call parameters and return values.
 * [20%] Provide comprehensive list for function call parameters and return values.
 * [20%] Output can be configured using `MONITOR_OUTPUT` environmental variable.
 * [10%] Use Makefile to manage the building process of your program. We will not grade your program if we cannot use make command to build your program.
+
+### Patch (95%)
+* Does not show `fscanf`
+
+
+## Project3
+Extend the Mini Lib C to Handle Signals
+
+### Grading Policy
+* [12%] alarm
+* [12%] sigprocmask
+* [12%] sigpending
+* [12%] functions to handle sigset\_t data type
+* [20%] setjmp and longjmp
+* [20%] signal and sigaction
+* [22%] extra (unpublished) test cases
