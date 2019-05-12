@@ -10,8 +10,7 @@ STUDENT_ID			:= 0756020
 EXECUTABLE			:= libmini.so
 
 OUT					?= .build
-SRC					?= src
-SRCS				:= $(wildcard $(SRC)/*.c $(SRC)/*.asm)
+SRCS				:= $(wildcard */*.c */*.asm)
 OBJS				:= $(addprefix $(OUT)/, $(SRCS:=.o))
 DEPS				:= $(OBJS:.o=.o.d)
 
@@ -31,10 +30,9 @@ $(OUT)/%.c.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $< -o $@ -c $(CFLAGS)
 
-test: $(OUT)/$(SRC)/start.asm.o $(OUT)/testcase/alarm3.c.o
-	$(LD) -m elf_x86_64 --dynamic-linker /lib64/ld-linux-x86-64.so.2 -o testcase/alarm3 $^ -L. -L.. -lmini
-	LD_LIBRARY_PATH=. testcase/alarm3
-
+mini_%: $(OUT)/src/start.asm.o $(OUT)/testcase/%.c.o
+	$(LD) -m elf_x86_64 --dynamic-linker /lib64/ld-linux-x86-64.so.2 $^ -o $@ -L. -L.. -lmini
+	LD_LIBRARY_PATH=. ./$@
 
 zip:
 	@rm -rf $(STUDENT_ID) $(STUDENT_ID).zip

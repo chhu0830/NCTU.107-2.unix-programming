@@ -115,6 +115,10 @@ typedef void __signalfn_t(int);
 typedef __signalfn_t *__sighandler_t;
 typedef void __restorefn_t(void);
 typedef __restorefn_t *__sigrestore_t;
+typedef struct jmp_buf_s {
+    long long reg[8];
+    sigset_t mask;
+} jmp_buf[1]; 
 
 struct timespec {
     long    tv_sec;     /* seconds */
@@ -161,6 +165,9 @@ int sigpending(sigset_t *set);
 
 size_t strlen(const char *s);
 void perror(const char *prefix);
+
+int setjmp(jmp_buf env);
+void longjmp(jmp_buf env, int val);
 
 /* Compute mask for signal SIG.  */
 # define sigmask(sig) ((int)(1u << ((sig) - 1)))

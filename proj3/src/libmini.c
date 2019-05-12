@@ -74,7 +74,25 @@ int sigprocmask(int how, const sigset_t *set, sigset_t *oldset) {
     long ret = sys_rt_sigprocmask(how, set, oldset, sizeof(sigset_t));
     RET_WRAP(int, -1);
 }
+
 WRAPPER(int, pause, -1, 0)
+
+unsigned int sleep(unsigned int seconds) {
+    struct timespec req, rem;
+
+    req.tv_sec = seconds;
+    req.tv_nsec = 0;
+
+    long ret = sys_nanosleep(&req, &rem);
+
+    if(ret >= 0) return ret;
+    if(ret == -EINTR) {
+        return rem.tv_sec;
+    }
+
+    return 0;
+}
+
 WRAPPER(unsigned int, alarm, -1, 1, unsigned int, secondes)
 
 void exit(int error_code) {
@@ -147,20 +165,4 @@ void perror(const char *prefix) {
     write(STDERR_FILENO, "\n", 1);
 
     return;
-}
-
-unsigned int sleep(unsigned int seconds) {
-    struct timespec req, rem;
-
-    req.tv_sec = seconds;
-    req.tv_nsec = 0;
-
-    long ret = sys_nanosleep(&req, &rem);
-
-    if(ret >= 0) return ret;
-    if(ret == -EINTR) {
-        return rem.tv_sec;
-    }
-
-    return 0;
 }
