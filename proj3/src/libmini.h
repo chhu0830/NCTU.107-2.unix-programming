@@ -87,17 +87,22 @@
 #define SA_NOCLDWAIT  2     /* Don't create zombie on child death.  */
 #define SA_SIGINFO    4     /* Invoke signal-catching function with
                                        three arguments instead of one.  */
-# define SA_ONSTACK   0x08000000    /* Use signal stack by using `sa_restorer'. */
-# define SA_RESTART   0x10000000    /* Restart syscall on signal return.  */
-# define SA_INTERRUPT 0x20000000    /* Historical no-op.  */
-# define SA_NODEFER   0x40000000    /* Don't automatically block the signal when
+#define SA_ONSTACK   0x08000000    /* Use signal stack by using `sa_restorer'. */
+#define SA_RESTART   0x10000000    /* Restart syscall on signal return.  */
+#define SA_INTERRUPT 0x20000000    /* Historical no-op.  */
+#define SA_NODEFER   0x40000000    /* Don't automatically block the signal when
                                        its handler is being executed.  */
-# define SA_RESETHAND 0x80000000    /* Reset to SIG_DFL on entry to handler.  */
+#define SA_RESETHAND 0x80000000    /* Reset to SIG_DFL on entry to handler.  */
+
+#define SA_RESTORER  0x04000000   
 
 #define SIG_BLOCK     0      /* Block signals.  */
 #define SIG_UNBLOCK   1      /* Unblock signals.  */
 #define SIG_SETMASK   2      /* Set the set of blocked signals.  */
 
+#define SIG_DFL ((__sighandler_t)0)  /* default signal handling */
+#define SIG_IGN ((__sighandler_t)1)   /* ignore signal */
+#define SIG_ERR ((__sighandler_t)-1) /* error return from signal */
 /*******************
  * Type Definition *
  *******************/
@@ -106,9 +111,21 @@
 typedef unsigned long long size_t;
 typedef long long ssize_t;
 typedef unsigned long sigset_t;
+typedef void __signalfn_t(int);
+typedef __signalfn_t *__sighandler_t;
+typedef void __restorefn_t(void);
+typedef __restorefn_t *__sigrestore_t;
+
 struct timespec {
     long    tv_sec;     /* seconds */
     long    tv_nsec;    /* nanoseconds */
+};
+
+struct sigaction {
+    __sighandler_t sa_handler;
+    unsigned long sa_flags;
+    __sigrestore_t sa_restorer;
+    sigset_t sa_mask;
 };
 
 extern long errno;
@@ -117,23 +134,33 @@ extern long errno;
  * Function Declaration *
  ************************/
 long sys_write(unsigned int fd, const char *buf, size_t count);
-long sys_rt_sigprocmask(int how, const sigset_t *nset, sigset_t *oset, size_t sigsetsize);
-long sys_pause();
-long sys_nanosleep(struct timespec *rqtp, struct timespec *rmtp);
-long sys_alarm(unsigned int seconds);
-long sys_exit(int error_code) __attribute__ ((noreturn));
-long sys_rt_sigpending(sigset_t *set, size_t sigsetsize);
-
 ssize_t write(int fd, const void *buf, size_t count);
+
+void sigrestore();
+long sys_rt_sigaction(int sig, const struct sigaction *act, struct sigaction *oact, size_t sigsetsize);
+int sigaction(int sig, const struct sigaction *restrict act, struct sigaction *restrict oact);
+__sighandler_t signal(int signum, __sighandler_t handler);
+
+long sys_rt_sigprocmask(int how, const sigset_t *nset, sigset_t *oset, size_t sigsetsize);
 int sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
+
+long sys_pause();
 int pause();
+
+long sys_nanosleep(struct timespec *rqtp, struct timespec *rmtp);
+unsigned int sleep(unsigned int seconds);
+
+long sys_alarm(unsigned int seconds);
 unsigned int alarm(unsigned int seconds);
+
+long sys_exit(int error_code) __attribute__ ((noreturn));
 void exit(int error_code);
+
+long sys_rt_sigpending(sigset_t *set, size_t sigsetsize);
 int sigpending(sigset_t *set);
 
 size_t strlen(const char *s);
 void perror(const char *prefix);
-unsigned int sleep(unsigned int seconds);
 
 /* Compute mask for signal SIG.  */
 # define sigmask(sig) ((int)(1u << ((sig) - 1)))

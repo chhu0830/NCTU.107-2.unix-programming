@@ -39,6 +39,37 @@ long errno;
 
 WRAPPER(ssize_t, write, -1, 3, int, fd, const void*, buf, size_t, count)
 
+int sigaction(int sig, const struct sigaction *restrict act, struct sigaction *restrict oact) {
+    struct sigaction nact = *act;
+
+    nact.sa_flags |= SA_RESTORER;
+    nact.sa_restorer = sigrestore;
+
+    long ret = sys_rt_sigaction(sig, &nact, oact, sizeof(sigset_t));
+    RET_WRAP(int, -1);
+}
+
+__sighandler_t signal(int signum, __sighandler_t handler) {
+    struct sigaction act, oact;
+    act.sa_handler = handler;
+    sigemptyset(&act.sa_mask);
+    act.sa_flags = 0;
+    if (signum == SIGALRM) {
+#ifdef SA_INTERRUPT
+        act.sa_flags |= SA_INTERRUPT;
+#endif
+    } else {
+#ifdef SA_RESTART
+        act.sa_flags |= SA_RESTART;
+#endif
+    }
+    if (sigaction(signum, &act, &oact) < 0) {
+        return SIG_ERR;
+    }
+
+    return oact.sa_handler;
+}
+
 int sigprocmask(int how, const sigset_t *set, sigset_t *oldset) {
     long ret = sys_rt_sigprocmask(how, set, oldset, sizeof(sigset_t));
     RET_WRAP(int, -1);
