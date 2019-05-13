@@ -45,10 +45,14 @@ setjmp:
     mov rax, [rsp]              ; rip
     mov [rdi+0x38], rax
 
+    push rcx
+    mov rax, rdi
     mov rdi, 0
     mov rsi, 0
-    lea rdx, [rdi+0x40]
+    lea rdx, [rax+0x40]
+    mov rcx, 8                  ; unsigned long
     call sys_rt_sigprocmask     ; sigprocmask(0, NULL, &mask);
+    pop rcx
 
     mov rax, 0
     ret
@@ -68,12 +72,16 @@ longjmp:
     mov rax, [rdi+0x38]
     push rax
 
+    push rcx
     push rsi
+    mov rax, rdi
     mov rdi, 2
-    lea rsi, [rdi+0x40]
+    lea rsi, [rax+0x40]
     mov rdx, 0
+    mov rcx, 8                  ; unsigned long
     call sys_rt_sigprocmask     ; sigprocmask(SIG_SETMASK, &mask, 0);
     pop rsi
+    pop rcx
 
     cmp rsi, 0
     jne next
