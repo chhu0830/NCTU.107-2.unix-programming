@@ -103,9 +103,11 @@
 #define SIG_UNBLOCK   1      /* Unblock signals.  */
 #define SIG_SETMASK   2      /* Set the set of blocked signals.  */
 
-#define SIG_DFL ((__sighandler_t)0)  /* default signal handling */
-#define SIG_IGN ((__sighandler_t)1)   /* ignore signal */
-#define SIG_ERR ((__sighandler_t)-1) /* error return from signal */
+#define SIG_ERR   ((__sighandler_t)-1) /* error return from signal */
+#define SIG_DFL   ((__sighandler_t)0)  /* default signal handling */
+#define SIG_IGN   ((__sighandler_t)1)  /* ignore signal */
+#define SIG_HOLD  ((__sighandler_t)2)  /* block signal */
+#define SIG_CATCH ((__sighandler_t)3)  /* catch signal */ 
 /*******************
  * Type Definition *
  *******************/
