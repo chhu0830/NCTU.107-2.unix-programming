@@ -6,6 +6,7 @@
  ***********************/
 #define TRUE 1
 #define FALSE 0
+#define NULL ((void*) 0)
 
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
@@ -108,11 +109,10 @@
 #define SIG_IGN   ((__sighandler_t)1)  /* ignore signal */
 #define SIG_HOLD  ((__sighandler_t)2)  /* block signal */
 #define SIG_CATCH ((__sighandler_t)3)  /* catch signal */ 
+
 /*******************
  * Type Definition *
  *******************/
-#define NULL ((void*) 0)
-
 typedef unsigned long long size_t;
 typedef long long ssize_t;
 typedef unsigned long sigset_t;
@@ -120,6 +120,7 @@ typedef void __signalfn_t(int);
 typedef __signalfn_t *__sighandler_t;
 typedef void __restorefn_t(void);
 typedef __restorefn_t *__sigrestore_t;
+
 typedef struct jmp_buf_s {
     long long reg[8];
     sigset_t mask;
@@ -142,54 +143,48 @@ extern long errno;
 /************************
  * Function Declaration *
  ************************/
-long sys_write(unsigned int fd, const char *buf, size_t count);
 ssize_t write(int fd, const void *buf, size_t count);
+long sys_write(unsigned int fd, const char *buf, size_t count);
 
-void sigrestore();
-long sys_rt_sigaction(int sig, const struct sigaction *act, struct sigaction *oact, size_t sigsetsize);
-int sigaction(int sig, const struct sigaction *restrict act, struct sigaction *restrict oact);
 __sighandler_t signal(int signum, __sighandler_t handler);
+int sigaction(int sig, const struct sigaction *restrict act, struct sigaction *restrict oact);
+long sys_rt_sigaction(int sig, const struct sigaction *act, struct sigaction *oact, size_t sigsetsize);
+void sigrestore();
+/* Compute mask for signal SIG.  */
+# define sigmask(sig) ((int)(1u << ((sig) - 1)))
+/* Make sure there is nothing inside the signal set. */
+# define sigemptyset(set) (*(set) = 0)
+/* Initialize the signal set to hold all signals. */
+# define sigfillset(set) (*set) = sigmask (NSIG) - 1
+/* Add SIG to the contents of SET. */
+# define sigaddset(set, sig) *(set) |= sigmask (sig)
+/* Delete SIG from signal set SET. */
+# define sigdelset(set, sig) *(set) &= ~sigmask (sig)
+/* Is SIG a member of the signal set SET? */
+# define sigismember(set, sig) ((*(set) & sigmask (sig)) != 0)
 
-long sys_rt_sigprocmask(int how, const sigset_t *nset, sigset_t *oset, size_t sigsetsize);
 int sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
+long sys_rt_sigprocmask(int how, const sigset_t *nset, sigset_t *oset, size_t sigsetsize);
 
-long sys_pause();
 int pause();
+long sys_pause();
 
-long sys_nanosleep(struct timespec *rqtp, struct timespec *rmtp);
 unsigned int sleep(unsigned int seconds);
+long sys_nanosleep(struct timespec *rqtp, struct timespec *rmtp);
 
-long sys_alarm(unsigned int seconds);
 unsigned int alarm(unsigned int seconds);
+long sys_alarm(unsigned int seconds);
 
-long sys_exit(int error_code) __attribute__ ((noreturn));
 void exit(int error_code);
+long sys_exit(int error_code) __attribute__ ((noreturn));
 
-long sys_rt_sigpending(sigset_t *set, size_t sigsetsize);
 int sigpending(sigset_t *set);
+long sys_rt_sigpending(sigset_t *set, size_t sigsetsize);
 
-size_t strlen(const char *s);
 void perror(const char *prefix);
+size_t strlen(const char *s);
 
 int setjmp(jmp_buf env);
 void longjmp(jmp_buf env, int val);
-
-/* Compute mask for signal SIG.  */
-# define sigmask(sig) ((int)(1u << ((sig) - 1)))
-
-/* Make sure there is nothing inside the signal set. */
-#  define sigemptyset(set) (*(set) = 0)
-
-/* Initialize the signal set to hold all signals. */
-#  define sigfillset(set) (*set) = sigmask (NSIG) - 1
-
-/* Add SIG to the contents of SET. */
-#  define sigaddset(set, sig) *(set) |= sigmask (sig)
-
-/* Delete SIG from signal set SET. */
-#  define sigdelset(set, sig) *(set) &= ~sigmask (sig)
-
-/* Is SIG a member of the signal set SET? */
-#  define sigismember(set, sig) ((*(set) & sigmask (sig)) != 0)
 
 #endif /* __LIBMINI_H__ */
