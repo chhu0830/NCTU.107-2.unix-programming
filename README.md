@@ -50,3 +50,15 @@ Extend the Mini Lib C to Handle Signals
 * [20%] setjmp and longjmp
 * [20%] signal and sigaction
 * [22%] extra (unpublished) test cases
+
+
+## Project4
+Simple Instruction Level Debugger
+
+### Grading Policy
+* Load and run the program.
+* Start the program, continue execution, and step into functions.
+* Dump memory content.
+* Set and get value from registers.
+* Disassemble assembly from the executable or from a memory region.
+* Handle break points.
