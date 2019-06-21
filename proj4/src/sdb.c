@@ -11,11 +11,15 @@
 #define PROMPT "sdb> "
 
 
-int main() {
+int main(int argc, const char **argv) {
     char *cmdline = NULL;
-    struct DEBUGGER *dbg = init_debugger();
+    debugger_t *dbg = init_debugger();
 
-    // TODO: ./sdb <program>
+    if (argc >= 2) {
+        char *arg[argc + 1];
+        copy_argv("load", argc, arg, argv);
+        dbg->exec(dbg, argc, (const char**)arg);
+    }
 
     while ((cmdline = readline(PROMPT))) {
         if (cmdline[0] == '\0') continue;
