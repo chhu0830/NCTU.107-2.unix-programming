@@ -1,6 +1,6 @@
 CC          ?= gcc
 CFLAGS      += -std=gnu99 -Wall -Wextra -MMD -MF $@.d
-LDFLAGS		+= -lreadline
+LDFLAGS		+= -lreadline -lelf
 
 STUDENT_ID  := 0756020
 EXECUTABLE  := sdb

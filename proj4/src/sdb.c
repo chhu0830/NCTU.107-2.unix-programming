@@ -15,7 +15,7 @@ int main() {
     char *cmdline = NULL;
     struct DEBUGGER *dbg = init_debugger();
 
-    //TODO: ./sdb <program>
+    // TODO: ./sdb <program>
 
     while ((cmdline = readline(PROMPT))) {
         if (cmdline[0] == '\0') continue;
@@ -30,6 +30,7 @@ int main() {
         free(cmdline);
     }
 
+    free_debugger(dbg);
     free(dbg);
 
     return 0;
