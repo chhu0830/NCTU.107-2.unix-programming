@@ -10,7 +10,7 @@ BUILDIN_REGESTER(load,) {
         ERRRET("no executable file specified.");
     }
 
-    if (dbg->status == LOADED || dbg->status == RUNNING) {
+    if (dbg->stat == LOADED || dbg->stat == RUNNING) {
         free_debugger(dbg);
     }
 
@@ -42,7 +42,7 @@ BUILDIN_REGESTER(load,) {
 
     if (dbg->text != NULL) {
         strcpy(dbg->program, argv[1]);
-        dbg->status = LOADED;
+        dbg->stat = LOADED;
 
         ERRRET("program '%s' loaded."
                " entry point %#lx, vaddr %#llx, offset %#llx, size %#llx",

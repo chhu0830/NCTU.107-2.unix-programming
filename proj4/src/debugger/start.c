@@ -10,10 +10,10 @@
 
 
 BUILDIN_REGESTER(start,) {
-    if (dbg->status == INIT) {
+    if (dbg->stat == INIT) {
         ERRRET("no executable file specified.  load first.");
     }
-    if (dbg->status == RUNNING) {
+    if (dbg->stat == RUNNING) {
         ERRRET("program %s is already running.", dbg->program);
     }
 
@@ -25,26 +25,28 @@ BUILDIN_REGESTER(start,) {
         }
 
         char *arg[argc + 1];
-        for (int i = 1; i < argc; i++) {
-            arg[i] = (char*)argv[i];
-        }
-        arg[0] = dbg->program;
-        arg[argc] = NULL;
+        copy_argv(dbg->program, argc, arg, argv);
 
         execvp(dbg->program, arg);
         ERRQUIT(1, "execvp failed.");
     } else {
-        int status;
-        if (waitpid(dbg->pid, &status, 0) < 0) {
+        if (waitpid(dbg->pid, &dbg->status, 0) < 0) {
             ERRRET("waitpid failed.");
         }
-        if (!WIFSTOPPED(status)) {
+        if (!WIFSTOPPED(dbg->status)) {
             ERRRET("child error.");
         }
 
+        // FIXME: calculate dbg base
         ptrace(PTRACE_SETOPTIONS, dbg->pid, 0, PTRACE_O_EXITKILL);
 
-        dbg->status = RUNNING;
+        break_pt_t *current = dbg->bp;
+        while (current != NULL) {
+            current->code = dbg->bp_patch(dbg, current->addr);
+            current = current->next;
+        }
+
+        dbg->stat = RUNNING;
         ERRRET("pid %d", dbg->pid);
     }
 }
