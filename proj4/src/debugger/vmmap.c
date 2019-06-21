@@ -15,7 +15,7 @@ char* flags2perm(long long flags) {
     return perm;
 }
 
-BUILDIN_REGESTER(vmmap,) {
+BUILDIN_REGESTER(vmmap, m) {
     if (dbg->status == LOADED) {
         fprintf(stdout, FORMAT,
                 dbg->text->addr,

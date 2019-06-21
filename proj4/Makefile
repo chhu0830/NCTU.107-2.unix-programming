@@ -3,7 +3,7 @@ CFLAGS      += -std=gnu99 -Wall -Wextra -MMD -MF $@.d
 LDFLAGS		+= -lreadline -lelf
 
 STUDENT_ID  := 0756020
-EXECUTABLE  := sdb
+EXECUTABLE  := sdb4
 
 OUT         ?= .build
 SRCS        := $(wildcard src/*.c src/*/*.c)
