@@ -63,8 +63,8 @@ BUILDIN_REGESTER(start,) {
 
         current = dbg->bp_check(dbg);
         if (current != NULL) {
-            // TODO: Show asm
-            ERRMSG("breakpoint @ %llx", current->addr);
+            fprintf(stdout, "** breakpoint @\t");
+            dbg->disasm(dbg, &current->code, sizeof(current->code), current->addr, 1);
         }
     }
 }

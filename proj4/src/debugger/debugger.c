@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <capstone/capstone.h>
 #include <sys/ptrace.h>
 #include <sys/user.h>
 #include <sys/wait.h>
@@ -18,6 +19,7 @@ void bp_unpatch(debugger_t *dbg, break_pt_t *break_pt);
 break_pt_t* bp_find_by_addr(debugger_t *dbg, unsigned long long addr);
 break_pt_t* bp_check(debugger_t *dbg);
 void reset_rip(debugger_t *dbg);
+void disasm(debugger_t *dbg, void* code, int length, unsigned long long addr, int n);
 
 
 struct BUILDIN_FUNC *list;
@@ -41,6 +43,7 @@ debugger_t* init_debugger() {
     dbg->bp_find_by_addr = bp_find_by_addr;
     dbg->bp_check = bp_check;
     dbg->reset_rip = reset_rip;
+    dbg->disasm = disasm;
 
     return dbg;
 }
@@ -144,6 +147,36 @@ void reset_rip(debugger_t *dbg) {
         if (ptrace(PTRACE_SETREGS, dbg->pid, 0, &regs) != 0) {
             ERRRET("set regs failed.");
         }
-        ERRRET("breakpoint @ %llx", regs.rip);
+
+        fprintf(stdout, "** breakpoint @\t");
+        dbg->disasm(dbg, &current->code, sizeof(current->code), current->addr, 1);
     }
+}
+
+void disasm(debugger_t *dbg, void* code, int length, unsigned long long addr, int n) {
+    static csh cshandle = 0;
+    if (cs_open(CS_ARCH_X86, CS_MODE_64, &cshandle) != CS_ERR_OK) {
+        ERRRET("capstone failed.");
+    }
+
+    cs_insn *insn;
+    int count = cs_disasm(cshandle, (uint8_t*)code, length, addr, 0, &insn);
+
+    if (count == 0) {
+        ERRRET("disasm failed.");
+    }
+    if (count > n) {
+        count = n;
+    }
+
+    for (int i = 0; i < count; i++) {
+        fprintf(stdout, "\t%lx:", insn[i].address);
+        for (int j = 0; j < insn[i].size; j++) {
+            fprintf(stdout, " %02x", insn[i].bytes[j]);
+        }
+        fprintf(stdout, "\t\t%-8s %s\n", insn[i].mnemonic, insn[i].op_str);
+    }
+
+    cs_free(insn, count);
+    cs_close(&cshandle);
 }

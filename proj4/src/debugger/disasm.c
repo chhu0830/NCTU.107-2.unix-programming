@@ -1,7 +1,7 @@
 #include <stdio.h>
 
-#include <sys/ptrace.h>
 #include <capstone/capstone.h>
+#include <sys/ptrace.h>
 
 #include "debugger.h"
 #include "elftool.h"
@@ -50,29 +50,5 @@ BUILDIN_REGESTER(disasm, d) {
         }
     }
     
-
-    static csh cshandle = 0;
-    if (cs_open(CS_ARCH_X86, CS_MODE_64, &cshandle) != CS_ERR_OK) {
-        ERRRET("capstone failed.");
-    }
-
-    cs_insn *insn;
-    int count = cs_disasm(cshandle, (uint8_t*)code, lcode, addr, 0, &insn);
-
-    if (count == 0) {
-        ERRRET("disasm failed.");
-    }
-    if (count > 10) {
-        count = 10;
-    }
-
-    for (int i = 0; i < count; i++) {
-        fprintf(stdout, "\t%lx:", insn[i].address);
-        for (int j = 0; j < insn[i].size; j++) {
-            fprintf(stdout, " %02x", insn[i].bytes[j]);
-        }
-        fprintf(stdout, "%8s %s\n", insn[i].mnemonic, insn[i].op_str);
-    }
-
-    cs_close(&cshandle);
+    dbg->disasm(dbg, code, lcode, addr, 10);
 }

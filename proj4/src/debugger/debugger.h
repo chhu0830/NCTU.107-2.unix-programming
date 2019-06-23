@@ -62,6 +62,7 @@ typedef struct debugger_s {
     break_pt_t* (*bp_find_by_addr)(struct debugger_s *dbg, unsigned long long addr);
     break_pt_t* (*bp_check)(struct debugger_s *dbg);
     void (*reset_rip)(struct debugger_s *dbg);
+    void (*disasm)(struct debugger_s *dbg, void* code, int length, unsigned long long addr, int n);
 } debugger_t;
 
 struct BUILDIN_FUNC {
