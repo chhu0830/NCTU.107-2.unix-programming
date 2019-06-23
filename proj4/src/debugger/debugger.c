@@ -14,8 +14,10 @@
 void exec(debugger_t *dbg, int argc, const char **argv);
 void bp_add(debugger_t *dbg, unsigned long long target);
 unsigned long long bp_patch(debugger_t *dbg, unsigned long long target);
+void bp_unpatch(debugger_t *dbg, break_pt_t *break_pt);
 break_pt_t* bp_find_by_addr(debugger_t *dbg, unsigned long long addr);
-void bp_recover(debugger_t *dbg, break_pt_t *break_pt);
+break_pt_t* bp_check(debugger_t *dbg);
+void reset_rip(debugger_t *dbg);
 
 
 struct BUILDIN_FUNC *list;
@@ -34,8 +36,10 @@ debugger_t* init_debugger() {
 
     dbg->exec = exec;
     dbg->bp_patch = bp_patch;
-    dbg->bp_recover = bp_recover;
+    dbg->bp_unpatch = bp_unpatch;
     dbg->bp_find_by_addr = bp_find_by_addr;
+    dbg->bp_check = bp_check;
+    dbg->reset_rip = reset_rip;
 
     return dbg;
 }
@@ -99,20 +103,10 @@ unsigned long long bp_patch(debugger_t *dbg, unsigned long long target) {
     return code;
 }
 
-void bp_recover(debugger_t *dbg, break_pt_t *break_pt) {
-    struct user_regs_struct regs;
-    if (ptrace(PTRACE_GETREGS, dbg->pid, 0, &regs)) {
-        ERRQUIT(1, "get regs failed.");
-    }
-
+void bp_unpatch(debugger_t *dbg, break_pt_t *break_pt) {
     if (ptrace(PTRACE_POKETEXT, dbg->pid,
                break_pt->addr, break_pt->code) != 0) {
         ERRRET("patch failed.");
-    }
-
-    regs.rip -= 1;
-    if (ptrace(PTRACE_SETREGS, dbg->pid, 0, &regs) != 0) {
-        ERRRET("set regs failed.");
     }
 }
 
@@ -125,4 +119,29 @@ break_pt_t* bp_find_by_addr(debugger_t *dbg, unsigned long long addr) {
         current = current->next;
     }
     return NULL;
+}
+
+break_pt_t* bp_check(debugger_t *dbg) {
+    struct user_regs_struct regs;
+    if (ptrace(PTRACE_GETREGS, dbg->pid, 0, &regs)) {
+        ERRQUIT(1, "get regs failed.");
+    }
+
+    return dbg->bp_find_by_addr(dbg, regs.rip);
+}
+
+void reset_rip(debugger_t *dbg) {
+    struct user_regs_struct regs;
+    if (ptrace(PTRACE_GETREGS, dbg->pid, 0, &regs)) {
+        ERRQUIT(1, "get regs failed.");
+    }
+
+    break_pt_t *current = dbg->bp_find_by_addr(dbg, regs.rip - 1);
+    if (current != NULL) {
+        regs.rip -= 1;
+        if (ptrace(PTRACE_SETREGS, dbg->pid, 0, &regs) != 0) {
+            ERRRET("set regs failed.");
+        }
+        ERRRET("breakpoint @ %llx", regs.rip);
+    }
 }

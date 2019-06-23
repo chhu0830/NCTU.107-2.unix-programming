@@ -28,17 +28,7 @@ BUILDIN_REGESTER(cont, c) {
         ERRRET("child process %d terminated normally (code %d)",
                dbg->pid, dbg->status);
     } else if (WIFSTOPPED(dbg->status)) {
-        struct user_regs_struct regs;
-        if (ptrace(PTRACE_GETREGS, dbg->pid, 0, &regs)) {
-            ERRQUIT(1, "get regs failed.");
-        }
-
-        break_pt_t *current = dbg->bp_find_by_addr(dbg, regs.rip - 1);
-
-        if (current != NULL) {
-            // TODO: Show asm
-            ERRMSG("breakpoint @ %llx", current->addr);
-        }
+        dbg->reset_rip(dbg);
     } else {
         // FIXME: continue execute?
     }

@@ -13,15 +13,9 @@ BUILDIN_REGESTER(si,) {
         ERRRET("the program is not being run.");
     }
 
-    struct user_regs_struct regs;
-    if (ptrace(PTRACE_GETREGS, dbg->pid, 0, &regs)) {
-        ERRQUIT(1, "get regs failed.");
-    }
-
-    break_pt_t *current = dbg->bp_find_by_addr(dbg, regs.rip - 1);
-
+    break_pt_t *current = dbg->bp_check(dbg);
     if (current != NULL) {
-        dbg->bp_recover(dbg, current);
+        dbg->bp_unpatch(dbg, current);
     }
 
     ptrace(PTRACE_SINGLESTEP, dbg->pid, 0, 0);
@@ -29,14 +23,16 @@ BUILDIN_REGESTER(si,) {
         ERRQUIT(1, "waitpid failed.");
     }
 
+    if (current != NULL) {
+        dbg->bp_patch(dbg, current->addr);
+    }
+
     if (WIFEXITED(dbg->status)) {
         // FIXME: return to load state
         free_debugger(dbg);
         ERRRET("child process %d terminated normally (code %d)",
                dbg->pid, dbg->status);
-    }
-    
-    if (current != NULL) {
-        dbg->bp_patch(dbg, current->addr);
+    } else if (WIFSTOPPED(dbg->status)) {
+        dbg->reset_rip(dbg);
     }
 }

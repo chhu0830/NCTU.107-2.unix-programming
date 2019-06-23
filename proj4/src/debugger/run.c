@@ -17,6 +17,8 @@ BUILDIN_REGESTER(run, r) {
         ERRMSG("program %s is already running.", dbg->program);
     }
 
-    copy_argv("cont", argc, arg, argv);
-    dbg->exec(dbg, argc, (const char**)arg);
+    if (dbg->bp_check(dbg) == NULL) {
+        copy_argv("cont", argc, arg, argv);
+        dbg->exec(dbg, argc, (const char**)arg);
+    }
 }

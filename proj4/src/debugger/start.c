@@ -4,6 +4,7 @@
 
 #include <sys/ptrace.h>
 #include <sys/types.h>
+#include <sys/user.h>
 #include <sys/wait.h>
 
 #include "debugger.h"
@@ -59,6 +60,12 @@ BUILDIN_REGESTER(start,) {
         }
 
         dbg->stat = RUNNING;
-        ERRRET("pid %d", dbg->pid);
+        ERRMSG("pid %d", dbg->pid);
+
+        current = dbg->bp_check(dbg);
+        if (current != NULL) {
+            // TODO: Show asm
+            ERRMSG("breakpoint @ %llx", current->addr);
+        }
     }
 }

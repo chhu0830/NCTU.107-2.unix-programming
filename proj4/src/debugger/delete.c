@@ -33,7 +33,7 @@ BUILDIN_REGESTER(delete,) {
     }
 
     if (current != NULL) {
-        dbg->bp_recover(dbg, current);
+        dbg->bp_unpatch(dbg, current);
         free(current);
         ERRRET("breakpoint %d deleted.", n);
     } else {

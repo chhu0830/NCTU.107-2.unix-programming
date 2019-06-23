@@ -59,8 +59,10 @@ typedef struct debugger_s {
 
     void (*exec)(struct debugger_s *dbg, int argc, const char **argv);
     unsigned long long (*bp_patch)(struct debugger_s *dbg, unsigned long long target);
-    void (*bp_recover)(struct debugger_s *dbg, break_pt_t *break_pt);
+    void (*bp_unpatch)(struct debugger_s *dbg, break_pt_t *break_pt);
     break_pt_t* (*bp_find_by_addr)(struct debugger_s *dbg, unsigned long long addr);
+    break_pt_t* (*bp_check)(struct debugger_s *dbg);
+    void (*reset_rip)(struct debugger_s *dbg);
 } debugger_t;
 
 struct BUILDIN_FUNC {
