@@ -27,6 +27,7 @@ debugger_t* init_debugger() {
     dbg->stat = INIT;
     dbg->bpi = 0;
     dbg->base = 0;
+    dbg->dump = 0;
     dbg->eh = NULL;
     dbg->text = NULL;
     dbg->bp = NULL;
@@ -59,6 +60,7 @@ void free_debugger(debugger_t *dbg) {
     dbg->stat = INIT;
     dbg->bpi = 0;
     dbg->base = 0;
+    dbg->dump = 0;
     dbg->eh = NULL;
     dbg->text = NULL;
     dbg->bp = NULL;

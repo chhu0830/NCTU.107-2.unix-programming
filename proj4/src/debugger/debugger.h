@@ -52,7 +52,7 @@ typedef struct break_pt_s {
 typedef struct debugger_s {
     char program[MAX_PROG_NAME_LEN];
     int stat, status, pid, bpi;
-    unsigned long long base;
+    unsigned long long base, dump;
     struct elf_handle_s *eh;
     struct elf_shdr_s *text;
     break_pt_t *bp;
