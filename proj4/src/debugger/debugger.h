@@ -50,7 +50,7 @@ typedef struct break_pt_s {
 typedef struct debugger_s {
     char program[MAX_PROG_NAME_LEN];
     int stat, status, pid, bpi;
-    unsigned long long base, dump;
+    unsigned long long base, ldump, ldisasm;
     struct elf_handle_s *eh;
     struct elf_phdr_s *ptext;
     struct elf_shdr_s *stext;
@@ -62,7 +62,7 @@ typedef struct debugger_s {
     break_pt_t* (*bp_find_by_addr)(struct debugger_s *dbg, unsigned long long addr);
     break_pt_t* (*bp_check)(struct debugger_s *dbg);
     void (*reset_rip)(struct debugger_s *dbg);
-    void (*disasm)(struct debugger_s *dbg, void* code, int length, unsigned long long addr, int n);
+    int (*disasm)(struct debugger_s *dbg, void* code, int length, unsigned long long addr, int n);
 } debugger_t;
 
 struct BUILDIN_FUNC {

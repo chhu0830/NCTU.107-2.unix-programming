@@ -8,7 +8,7 @@
 
 
 BUILDIN_REGESTER(disasm, d) {
-    if (argc < 2) {
+    if (argc < 2 && dbg->ldisasm == 0) {
         ERRRET("no addr is given.");
     }
     if (dbg->stat != LOADED && dbg->stat != RUNNING) {
@@ -18,7 +18,7 @@ BUILDIN_REGESTER(disasm, d) {
 
     int lcode = 160;
     unsigned char code[256];
-    unsigned long long addr = strtoll(argv[1], NULL, 0);
+    unsigned long long addr = (argc < 2 ? dbg->ldisasm : strtoll(argv[1], NULL, 0));
 
     if (dbg->stat == LOADED) {
         int offset = addr - dbg->ptext->vaddr;
@@ -50,5 +50,5 @@ BUILDIN_REGESTER(disasm, d) {
         }
     }
     
-    dbg->disasm(dbg, code, lcode, addr, 10);
+    dbg->ldisasm = addr + dbg->disasm(dbg, code, lcode, addr, 10);
 }

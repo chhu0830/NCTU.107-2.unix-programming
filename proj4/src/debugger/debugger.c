@@ -19,7 +19,7 @@ void bp_unpatch(debugger_t *dbg, break_pt_t *break_pt);
 break_pt_t* bp_find_by_addr(debugger_t *dbg, unsigned long long addr);
 break_pt_t* bp_check(debugger_t *dbg);
 void reset_rip(debugger_t *dbg);
-void disasm(debugger_t *dbg, void* code, int length, unsigned long long addr, int n);
+int disasm(debugger_t *dbg, void* code, int length, unsigned long long addr, int n);
 
 
 struct BUILDIN_FUNC *list;
@@ -31,7 +31,8 @@ debugger_t* init_debugger() {
     dbg->stat = INIT;
     dbg->bpi = 0;
     dbg->base = 0;
-    dbg->dump = 0;
+    dbg->ldump = 0;
+    dbg->ldisasm = 0;
     dbg->eh = NULL;
     dbg->ptext = NULL;
     dbg->stext = NULL;
@@ -68,7 +69,8 @@ void free_debugger(debugger_t *dbg) {
     dbg->stat = INIT;
     dbg->bpi = 0;
     dbg->base = 0;
-    dbg->dump = 0;
+    dbg->ldump = 0;
+    dbg->ldisasm = 0;
     dbg->eh = NULL;
     dbg->ptext = NULL;
     dbg->stext = NULL;
@@ -153,17 +155,20 @@ void reset_rip(debugger_t *dbg) {
     }
 }
 
-void disasm(debugger_t *dbg, void* code, int length, unsigned long long addr, int n) {
+int disasm(debugger_t *dbg, void* code, int length, unsigned long long addr, int n) {
+    int total = 0;
     static csh cshandle = 0;
     if (cs_open(CS_ARCH_X86, CS_MODE_64, &cshandle) != CS_ERR_OK) {
-        ERRRET("capstone failed.");
+        ERRMSG("capstone failed.");
+        return 0;
     }
 
     cs_insn *insn;
     int count = cs_disasm(cshandle, (uint8_t*)code, length, addr, 0, &insn);
 
     if (count == 0) {
-        ERRRET("disasm failed.");
+        ERRMSG("disasm failed.");
+        return 0;
     }
     if (count > n) {
         count = n;
@@ -175,8 +180,11 @@ void disasm(debugger_t *dbg, void* code, int length, unsigned long long addr, in
             fprintf(stdout, " %02x", insn[i].bytes[j]);
         }
         fprintf(stdout, "\t\t%-8s %s\n", insn[i].mnemonic, insn[i].op_str);
+        total += insn[i].size;
     }
 
     cs_free(insn, count);
     cs_close(&cshandle);
+
+    return total;
 }

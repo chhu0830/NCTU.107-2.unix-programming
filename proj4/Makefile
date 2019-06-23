@@ -1,9 +1,9 @@
 CC          ?= gcc
 CFLAGS      += -std=gnu99 -Wall -Wextra -MMD -MF $@.d
-LDFLAGS		+= -lreadline -lelf
+LDFLAGS		+= -lreadline -lelf -lcapstone
 
 STUDENT_ID  := 0756020
-EXECUTABLE  := sdb4
+EXECUTABLE  := sdb
 
 OUT         ?= .build
 SRCS        := $(wildcard src/*.c src/*/*.c)
