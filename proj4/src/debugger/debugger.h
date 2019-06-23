@@ -41,8 +41,6 @@
 /**************
  * Structures *
  **************/
-struct elf_handle_s;
-
 typedef struct break_pt_s {
     int id;
     unsigned long long addr, code;
@@ -54,7 +52,8 @@ typedef struct debugger_s {
     int stat, status, pid, bpi;
     unsigned long long base, dump;
     struct elf_handle_s *eh;
-    struct elf_shdr_s *text;
+    struct elf_phdr_s *ptext;
+    struct elf_shdr_s *stext;
     break_pt_t *bp;
 
     void (*exec)(struct debugger_s *dbg, int argc, const char **argv);

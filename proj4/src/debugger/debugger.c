@@ -31,7 +31,8 @@ debugger_t* init_debugger() {
     dbg->base = 0;
     dbg->dump = 0;
     dbg->eh = NULL;
-    dbg->text = NULL;
+    dbg->ptext = NULL;
+    dbg->stext = NULL;
     dbg->bp = NULL;
 
     dbg->exec = exec;
@@ -66,7 +67,8 @@ void free_debugger(debugger_t *dbg) {
     dbg->base = 0;
     dbg->dump = 0;
     dbg->eh = NULL;
-    dbg->text = NULL;
+    dbg->ptext = NULL;
+    dbg->stext = NULL;
     dbg->bp = NULL;
 }
 

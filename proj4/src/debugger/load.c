@@ -24,30 +24,42 @@ BUILDIN_REGESTER(load,) {
     }
 
     elf_strtab_t *tab = NULL;
-    for(tab = dbg->eh->strtab; tab != NULL; tab = tab->next) {
+    for (tab = dbg->eh->strtab; tab != NULL; tab = tab->next) {
 		if(tab->id == dbg->eh->shstrndx) break;
 	}
-	if(tab == NULL) {
+	if (tab == NULL) {
         free_debugger(dbg);
         ERRRET("section header string table not found.");
 	}
 
-	for(int i = 0; i < dbg->eh->shnum; i++) {
-        // FIXME: Don't use .text to find code segment
-        if (strcmp(&tab->data[dbg->eh->shdr[i].name], ".text") == 0) {
-            dbg->text = &dbg->eh->shdr[i];
+    for (int i = 0; i < dbg->eh->phnum; i++) {
+        if (dbg->eh->phdr[i].type == PT_LOAD
+                && dbg->eh->phdr[i].flags & PF_R
+                && dbg->eh->phdr[i].flags & PF_X) {
+            dbg->ptext = &dbg->eh->phdr[i];
             break;
         }
     }
 
-    if (dbg->text != NULL) {
+	for (int i = 0; i < dbg->eh->shnum; i++) {
+        if (dbg->eh->shdr[i].type == SHT_PROGBITS
+                && dbg->eh->shdr[i].flags & SHF_ALLOC
+                && dbg->eh->shdr[i].flags & SHF_EXECINSTR
+                && dbg->eh->entrypoint >= dbg->eh->shdr[i].addr
+                && dbg->eh->entrypoint < dbg->eh->shdr[i].addr + dbg->eh->shdr[i].size) {
+            dbg->stext = &dbg->eh->shdr[i];
+            break;
+        }
+    }
+
+    if (dbg->stext != NULL) {
         strcpy(dbg->program, argv[1]);
         dbg->stat = LOADED;
 
         ERRRET("program '%s' loaded."
                " entry point %#lx, vaddr %#llx, offset %#llx, size %#llx",
                argv[1], dbg->eh->entrypoint,
-               dbg->text->addr, dbg->text->offset, dbg->text->size);
+               dbg->stext->addr, dbg->stext->offset, dbg->stext->size);
     } else {
         free_debugger(dbg);
         ERRRET("no text segment.");

@@ -47,8 +47,7 @@ BUILDIN_REGESTER(start,) {
         long long begin;
         FILE *maps = fopen(filename, "r");
         fscanf(maps, "%llx", &begin);
-        // FIXME:  Use phdr
-        dbg->base = ((dbg->text->addr - dbg->text->offset) == begin ? 0 : begin);
+        dbg->base = (dbg->ptext->vaddr == 0 ? begin : 0);
 
         fclose(maps);
 

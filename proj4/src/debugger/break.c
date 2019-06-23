@@ -17,8 +17,8 @@ BUILDIN_REGESTER(break, b) {
     }
 
     unsigned long long target = strtoll(argv[1], NULL, 0);
-    unsigned long long begin = dbg->base + dbg->text->addr;
-    unsigned long long end = dbg->base + dbg->text->addr + dbg->text->size;
+    unsigned long long begin = dbg->base + dbg->stext->addr;
+    unsigned long long end = dbg->base + dbg->stext->addr + dbg->stext->size;
 
     if (target < begin || target > end) {
         ERRRET("address out of range.");

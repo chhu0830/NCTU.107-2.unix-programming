@@ -18,10 +18,10 @@ char* flags2perm(long long flags) {
 BUILDIN_REGESTER(vmmap, m) {
     if (dbg->stat == LOADED) {
         fprintf(stdout, FORMAT,
-                dbg->text->addr,
-                dbg->text->addr + dbg->text->size,
-                flags2perm(dbg->text->flags),
-                dbg->text->offset,
+                dbg->stext->addr,
+                dbg->stext->addr + dbg->stext->size,
+                flags2perm(dbg->stext->flags),
+                dbg->stext->offset,
                 dbg->program);
     } else if (dbg->stat == RUNNING){
         char filename[128];
