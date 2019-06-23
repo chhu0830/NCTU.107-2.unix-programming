@@ -101,7 +101,7 @@ void bp_add(debugger_t *dbg, unsigned long long target) {
 }
 
 unsigned long long bp_patch(debugger_t *dbg, unsigned long long target) {
-    unsigned long long code = ptrace(PTRACE_PEEKTEXT, dbg->pid, target + dbg->base, 0);
+    unsigned long long code = ptrace(PTRACE_PEEKTEXT, dbg->pid, target, 0);
     if (ptrace(PTRACE_POKETEXT, dbg->pid, target,
                (code & 0xffffffffffffff00) | 0xcc) != 0) {
         ERRMSG("break failed.");

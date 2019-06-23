@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 
 #include "debugger.h"
+#include "elftool.h"
 
 
 BUILDIN_REGESTER(start,) {
@@ -37,11 +38,22 @@ BUILDIN_REGESTER(start,) {
             ERRRET("child error.");
         }
 
-        // FIXME: calculate dbg base
         ptrace(PTRACE_SETOPTIONS, dbg->pid, 0, PTRACE_O_EXITKILL);
+
+        char filename[128];
+        sprintf(filename, "/proc/%d/maps", dbg->pid);
+
+        long long begin;
+        FILE *maps = fopen(filename, "r");
+        fscanf(maps, "%llx", &begin);
+        // FIXME:  Use phdr
+        dbg->base = ((dbg->text->addr - dbg->text->offset) == begin ? 0 : begin);
+
+        fclose(maps);
 
         break_pt_t *current = dbg->bp;
         while (current != NULL) {
+            current->addr += dbg->base;
             current->code = dbg->bp_patch(dbg, current->addr);
             current = current->next;
         }

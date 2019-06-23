@@ -24,5 +24,5 @@ BUILDIN_REGESTER(break, b) {
         ERRRET("address out of range.");
     }
 
-    dbg->bp_add(dbg, target - dbg->base);
+    dbg->bp_add(dbg, target);
 }
