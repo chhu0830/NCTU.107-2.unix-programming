@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <sys/ptrace.h>
+#include <sys/user.h>
 #include <sys/wait.h>
 
 #include "elftool.h"
@@ -14,6 +15,7 @@ void exec(debugger_t *dbg, int argc, const char **argv);
 void bp_add(debugger_t *dbg, unsigned long long target);
 unsigned long long bp_patch(debugger_t *dbg, unsigned long long target);
 break_pt_t* bp_find_by_addr(debugger_t *dbg, unsigned long long addr);
+void bp_recover(debugger_t *dbg, break_pt_t *break_pt);
 
 
 struct BUILDIN_FUNC *list;
@@ -30,8 +32,8 @@ debugger_t* init_debugger() {
     dbg->bp = NULL;
 
     dbg->exec = exec;
-    dbg->bp_add = bp_add;
     dbg->bp_patch = bp_patch;
+    dbg->bp_recover = bp_recover;
     dbg->bp_find_by_addr = bp_find_by_addr;
 
     return dbg;
@@ -85,21 +87,6 @@ void exec(debugger_t *dbg, int argc, const char **argv) {
     }
 }
 
-void bp_add(debugger_t *dbg, unsigned long long target) {
-    break_pt_t *bp = malloc(sizeof(break_pt_t));
-    bp->id = dbg->bpi++;
-    bp->addr = target;
-    bp->code = (dbg->stat == RUNNING ? dbg->bp_patch(dbg, target) : 0);
-    bp->next = NULL;
-
-    if (dbg->bp == NULL) {
-        dbg->bp = bp;
-    } else {
-        bp->next = dbg->bp;
-        dbg->bp = bp;
-    }
-}
-
 unsigned long long bp_patch(debugger_t *dbg, unsigned long long target) {
     unsigned long long code = ptrace(PTRACE_PEEKTEXT, dbg->pid, target, 0);
     if (ptrace(PTRACE_POKETEXT, dbg->pid, target,
@@ -108,6 +95,23 @@ unsigned long long bp_patch(debugger_t *dbg, unsigned long long target) {
         code = 0;
     }
     return code;
+}
+
+void bp_recover(debugger_t *dbg, break_pt_t *break_pt) {
+    struct user_regs_struct regs;
+    if (ptrace(PTRACE_GETREGS, dbg->pid, 0, &regs)) {
+        ERRQUIT(1, "get regs failed.");
+    }
+
+    if (ptrace(PTRACE_POKETEXT, dbg->pid,
+               break_pt->addr, break_pt->code) != 0) {
+        ERRRET("patch failed.");
+    }
+
+    regs.rip -= 1;
+    if (ptrace(PTRACE_SETREGS, dbg->pid, 0, &regs) != 0) {
+        ERRRET("patch failed.");
+    }
 }
 
 break_pt_t* bp_find_by_addr(debugger_t *dbg, unsigned long long addr) {

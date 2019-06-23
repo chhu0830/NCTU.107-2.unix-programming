@@ -58,8 +58,8 @@ typedef struct debugger_s {
     break_pt_t *bp;
 
     void (*exec)(struct debugger_s *dbg, int argc, const char **argv);
-    void (*bp_add)(struct debugger_s *dbg, unsigned long long target);
     unsigned long long (*bp_patch)(struct debugger_s *dbg, unsigned long long target);
+    void (*bp_recover)(struct debugger_s *dbg, break_pt_t *break_pt);
     break_pt_t* (*bp_find_by_addr)(struct debugger_s *dbg, unsigned long long addr);
 } debugger_t;
 

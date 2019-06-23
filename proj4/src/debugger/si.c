@@ -18,19 +18,10 @@ BUILDIN_REGESTER(si,) {
         ERRQUIT(1, "get regs failed.");
     }
 
-    unsigned long long code = ptrace(PTRACE_PEEKTEXT, dbg->pid, regs.rip-1, 0);
     break_pt_t *current = dbg->bp_find_by_addr(dbg, regs.rip - 1);
 
     if (current != NULL) {
-        if (ptrace(PTRACE_POKETEXT, dbg->pid,
-                   current->addr, current->code) != 0) {
-            ERRRET("patch failed.");
-        }
-
-        regs.rip -= 1;
-        if (ptrace(PTRACE_SETREGS, dbg->pid, 0, &regs) != 0) {
-            ERRRET("patch failed.");
-        }
+        dbg->bp_recover(dbg, current);
     }
 
     ptrace(PTRACE_SINGLESTEP, dbg->pid, 0, 0);
@@ -39,15 +30,13 @@ BUILDIN_REGESTER(si,) {
     }
 
     if (WIFEXITED(dbg->status)) {
-        dbg->stat = LOADED;
+        // FIXME: return to load state
+        free_debugger(dbg);
         ERRRET("child process %d terminated normally (code %d)",
                dbg->pid, dbg->status);
     }
     
     if (current != NULL) {
-        if (ptrace(PTRACE_POKETEXT, dbg->pid, current->addr, code) != 0) {
-            ERRRET("break failed.");
-        }
+        dbg->bp_patch(dbg, current->addr);
     }
-
 }

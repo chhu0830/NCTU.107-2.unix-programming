@@ -23,6 +23,21 @@ BUILDIN_REGESTER(break, b) {
     if (target < begin || target > end) {
         ERRRET("address out of range.");
     }
+    if (dbg->bp_find_by_addr(dbg, target) != NULL) {
+        ERRRET("breakpoint already set @ %llx.", target);
+    }
 
-    dbg->bp_add(dbg, target);
+    break_pt_t *bp = malloc(sizeof(break_pt_t));
+    bp->id = dbg->bpi++;
+    bp->addr = target;
+    bp->code = (dbg->stat == RUNNING ? dbg->bp_patch(dbg, target) : 0);
+    bp->next = NULL;
+
+    if (dbg->bp == NULL) {
+        dbg->bp = bp;
+    } else {
+        break_pt_t *current = dbg->bp;
+        while (current->next != NULL) current = current->next;
+        current->next = bp;
+    }
 }

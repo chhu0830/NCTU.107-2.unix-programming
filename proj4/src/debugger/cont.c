@@ -23,7 +23,8 @@ BUILDIN_REGESTER(cont, c) {
     }
 
     if (WIFEXITED(dbg->status)) {
-        dbg->stat = LOADED;
+        // FIXME: return to load state
+        free_debugger(dbg);
         ERRRET("child process %d terminated normally (code %d)",
                dbg->pid, dbg->status);
     } else if (WIFSTOPPED(dbg->status)) {
