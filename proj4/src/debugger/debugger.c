@@ -110,7 +110,7 @@ void bp_recover(debugger_t *dbg, break_pt_t *break_pt) {
 
     regs.rip -= 1;
     if (ptrace(PTRACE_SETREGS, dbg->pid, 0, &regs) != 0) {
-        ERRRET("patch failed.");
+        ERRRET("set regs failed.");
     }
 }
 
