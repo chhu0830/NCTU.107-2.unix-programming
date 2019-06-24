@@ -13,6 +13,7 @@
 
 
 void exec(debugger_t *dbg, int argc, const char **argv);
+void cmd(debugger_t *dbg, const int param);
 void bp_add(debugger_t *dbg, unsigned long long target);
 unsigned long long bp_patch(debugger_t *dbg, unsigned long long target);
 void bp_unpatch(debugger_t *dbg, break_pt_t *break_pt);
@@ -26,19 +27,10 @@ struct BUILDIN_FUNC *list;
 
 
 debugger_t* init_debugger() {
-    debugger_t *dbg = malloc(sizeof(debugger_t));
-
-    dbg->stat = INIT;
-    dbg->bpi = 0;
-    dbg->base = 0;
-    dbg->ldump = 0;
-    dbg->ldisasm = 0;
-    dbg->eh = NULL;
-    dbg->ptext = NULL;
-    dbg->stext = NULL;
-    dbg->bp = NULL;
+    debugger_t *dbg = calloc(1, sizeof(debugger_t));
 
     dbg->exec = exec;
+    dbg->cmd = cmd;
     dbg->bp_patch = bp_patch;
     dbg->bp_unpatch = bp_unpatch;
     dbg->bp_find_by_addr = bp_find_by_addr;
@@ -46,17 +38,31 @@ debugger_t* init_debugger() {
     dbg->reset_rip = reset_rip;
     dbg->disasm = disasm;
 
+    dbg->stat = INIT;
     return dbg;
 }
 
-void free_debugger(debugger_t *dbg) {
+void stop_debugger(debugger_t *dbg) {
     if (dbg->stat == INIT) return;
     if (dbg->stat == RUNNING) {
         if (kill(dbg->pid, SIGKILL) == 0) {
             waitpid(dbg->pid, NULL, 0);
         }
+        if (dbg->ptext->vaddr == 0) {
+            break_pt_t *current = dbg->bp;
+            while (current != NULL) {
+                current->addr -= dbg->base;
+                current = current->next;
+            }
+        }
     }
+    dbg->base = 0;
+    dbg->ldump = 0;
+    dbg->ldisasm = 0;
+    dbg->stat = LOADED;
+}
 
+void reset_debugger(debugger_t *dbg) {
     break_pt_t *current = dbg->bp, *next;
     while (current != NULL) {
         next = current->next;
@@ -66,7 +72,6 @@ void free_debugger(debugger_t *dbg) {
 
     elf_close(dbg->eh);
 
-    dbg->stat = INIT;
     dbg->bpi = 0;
     dbg->base = 0;
     dbg->ldump = 0;
@@ -75,6 +80,12 @@ void free_debugger(debugger_t *dbg) {
     dbg->ptext = NULL;
     dbg->stext = NULL;
     dbg->bp = NULL;
+    dbg->stat = INIT;
+}
+
+void free_debugger(debugger_t *dbg) {
+    stop_debugger(dbg);
+    reset_debugger(dbg);
 }
 
 void copy_argv(char *first, int argc, char **new_argv, const char **old_argv) {
@@ -97,6 +108,28 @@ void exec(debugger_t *dbg, int argc, const char **argv) {
     if (current != NULL) current->exec(dbg, argc, argv);
     else {
         fprintf(stderr, "** undefined command: '%s'.\n", argv[0]);
+    }
+}
+
+void cmd(debugger_t *dbg, const int param) {
+    ptrace(param, dbg->pid, 0, 0);
+    if (waitpid(dbg->pid, &dbg->status, 0) < 0) {
+        ERRQUIT(1, "waitpid failed.");
+    }
+
+    if (WIFEXITED(dbg->status)) {
+        stop_debugger(dbg);
+        if (dbg->status != 0) {
+            ERRRET("child process %d terminated abnormally (code %d)",
+                   dbg->pid, dbg->status);
+        } else {
+            ERRRET("child process %d terminated normally (code %d)",
+                   dbg->pid, dbg->status);
+        }
+    } else if (WIFSTOPPED(dbg->status)) {
+        dbg->reset_rip(dbg);
+    } else {
+        ERRRET("child process %d signaled", dbg->pid);
     }
 }
 
@@ -150,7 +183,7 @@ void reset_rip(debugger_t *dbg) {
             ERRRET("set regs failed.");
         }
 
-        fprintf(stdout, "** breakpoint @\t");
+        fprintf(stdout, "** breakpoint @ ");
         dbg->disasm(dbg, &current->code, sizeof(current->code), current->addr, 1);
     }
 }
@@ -175,11 +208,14 @@ int disasm(debugger_t *dbg, void* code, int length, unsigned long long addr, int
     }
 
     for (int i = 0; i < count; i++) {
-        fprintf(stdout, "\t%lx:", insn[i].address);
+        fprintf(stdout, "%16lx:", insn[i].address);
         for (int j = 0; j < insn[i].size; j++) {
             fprintf(stdout, " %02x", insn[i].bytes[j]);
         }
-        fprintf(stdout, "\t\t%-8s %s\n", insn[i].mnemonic, insn[i].op_str);
+        for (int j = 0; j < 16 - insn[i].size; j++) {
+            fprintf(stdout, "   ");
+        }
+        fprintf(stdout, "%-8s %s\n", insn[i].mnemonic, insn[i].op_str);
         total += insn[i].size;
     }
 

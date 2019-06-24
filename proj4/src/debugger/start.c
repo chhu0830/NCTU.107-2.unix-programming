@@ -63,7 +63,7 @@ BUILDIN_REGESTER(start,) {
 
         current = dbg->bp_check(dbg);
         if (current != NULL) {
-            fprintf(stdout, "** breakpoint @\t");
+            fprintf(stdout, "** breakpoint @ ");
             dbg->disasm(dbg, &current->code, sizeof(current->code), current->addr, 1);
         }
     }

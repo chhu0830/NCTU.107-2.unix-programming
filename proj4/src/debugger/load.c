@@ -28,7 +28,7 @@ BUILDIN_REGESTER(load,) {
 		if(tab->id == dbg->eh->shstrndx) break;
 	}
 	if (tab == NULL) {
-        free_debugger(dbg);
+        reset_debugger(dbg);
         ERRRET("section header string table not found.");
 	}
 
@@ -61,7 +61,7 @@ BUILDIN_REGESTER(load,) {
                argv[1], dbg->eh->entrypoint,
                dbg->stext->addr, dbg->stext->offset, dbg->stext->size);
     } else {
-        free_debugger(dbg);
+        reset_debugger(dbg);
         ERRRET("no text segment.");
     }
 }

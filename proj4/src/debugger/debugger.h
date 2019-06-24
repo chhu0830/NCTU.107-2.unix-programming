@@ -57,6 +57,7 @@ typedef struct debugger_s {
     break_pt_t *bp;
 
     void (*exec)(struct debugger_s *dbg, int argc, const char **argv);
+    void (*cmd)(struct debugger_s *dbg, const int param);
     unsigned long long (*bp_patch)(struct debugger_s *dbg, unsigned long long target);
     void (*bp_unpatch)(struct debugger_s *dbg, break_pt_t *break_pt);
     break_pt_t* (*bp_find_by_addr)(struct debugger_s *dbg, unsigned long long addr);
@@ -77,4 +78,6 @@ struct BUILDIN_FUNC {
  *************************/
 debugger_t* init_debugger();
 void free_debugger(debugger_t *dbg);
+void stop_debugger(debugger_t *dbg);
+void reset_debugger(debugger_t *dbg);
 void copy_argv(char *first, int argc, char **new_argv, const char **old_argv);
